@@ -155,7 +155,7 @@ public static partial class ioDriver
 
     private static VecN ToVecN<T>(T _obj)
     {
-        if (!InitDone) Init();
+        Init();
         var dimCnt = DTypeInfo<T>.DimCount;
         var vals = new float[dimCnt];
         for (int idx = 0; idx < dimCnt; ++idx)
@@ -400,7 +400,7 @@ public static partial class ioDriver
 
         static Path()
         {
-            if (!InitDone) ioDriver.Init();
+            ioDriver.Init();
         }
 
         #region Nested Interfaces

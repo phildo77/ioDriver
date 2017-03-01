@@ -39,7 +39,7 @@ public static partial class ioDriver
 	{
 	    static Event()
 	    {
-	        if (!InitDone) ioDriver.Init();
+	        ioDriver.Init();
 	    }
 
 		/// Constant representing infinite event fire count.

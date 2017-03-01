@@ -25,6 +25,10 @@ public static partial class ioDriver
     private static Dictionary<object, Func<float, float>> m_CustomEaseFuncs = new Dictionary<object, Func<float, float>>();
     private static bool m_DebugEnableGlobal = false;
 
+    private static Type m_UnityEngine;
+    private static bool? m_UnityPresent;
+    private static Func<bool> m_UnityMgrPresent;
+
     #endregion Fields
 
 
@@ -32,8 +36,7 @@ public static partial class ioDriver
 
     static ioDriver()
     {
-        if (!InitDone)
-            Init();
+        Init();
     }
 
     #endregion Constructors
@@ -459,6 +462,44 @@ public static partial class ioDriver
     /// Initialize ioDriver.  Called in static constructor.
     public static void Init()
     {
+        if (m_UnityPresent == null)
+        {
+            m_UnityEngine = Type.GetType("UnityEngine.Transform, UnityEngine");
+            m_UnityPresent = m_UnityEngine != null;
+
+            var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
+            var umInstFld = um.GetField("m_Instance",BindingFlags.NonPublic | BindingFlags.Static);
+            m_UnityMgrPresent = () => umInstFld.GetValue(um) != null;
+
+
+        }
+
+        //Do Unity Init if present
+        if (m_UnityPresent.Value && !m_UnityMgrPresent())
+        {
+            var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
+            if (um != null)
+            {
+                um.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic).Invoke(um, null);
+                Log.Info("Unity Detected - ioDriverUnityManager Initialized.");
+            }
+
+            /*
+            var dbg = GetTypeEx("UnityEngine.Debug");
+            if (dbg != null)
+            {
+                var lg = dbg.GetMethod("Log", new[] { typeof(string) });
+                var lgw = dbg.GetMethod("LogWarning", new[] { typeof(string) });
+                var lge = dbg.GetMethod("LogError", new[] { typeof(string) });
+                SetLogMethods(
+                    _msg => lg.Invoke(dbg, new object[] { _msg }),
+                    _msg => lgw.Invoke(dbg, new object[] { _msg }),
+                    _msg => lge.Invoke(dbg, new object[] { _msg }));
+            }
+             */
+
+        }
+
         if (InitDone) return;
         InitDone = true;
 
@@ -475,17 +516,7 @@ public static partial class ioDriver
         typeof(Event).GetMethod("Init", BindingFlags.NonPublic | BindingFlags.Static)
             .Invoke(typeof(Event), null);
 
-        //Do Unity Init if present
-        var unityPresent = Type.GetType("UnityEngine.Transform, UnityEngine");
-        if (unityPresent != null)
-        {
-            var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
-            if (um != null)
-            {
-                um.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic).Invoke(um, null);
-                Log.Info("Unity Detected - ioDriverUnityManager Initialized.");
-            }
-        }
+        
         Log.Info("ioDriver Initialized");
     }
 
@@ -1317,7 +1348,7 @@ public static partial class ioDriver
 
             public static void Start(DBase _driver)
             {
-                if (!ioDriver.InitDone) ioDriver.Init();
+                ioDriver.Init();
                 if (!_driver.m_Dispose) m_StartQueue.Enqueue(_driver);
             }
 
