@@ -493,11 +493,18 @@ public static partial class ioDriver
             m_UnityPresent = m_UnityEngine != null;
 
             var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
-            var umInstFld = um.GetField("m_Instance",BindingFlags.NonPublic | BindingFlags.Static);
+            var umInstFld = um.GetField("m_Instance", BindingFlags.NonPublic | BindingFlags.Static);
             m_UnityMgrPresent = () => umInstFld.GetValue(um) != null;
+
+            InitDone = false;
 
 
         }
+
+
+
+        if (InitDone) return;
+        InitDone = true;
 
         //Do Unity Init if present
         if (m_UnityPresent.Value && !m_UnityMgrPresent())
@@ -506,27 +513,11 @@ public static partial class ioDriver
             if (um != null)
             {
                 um.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic).Invoke(um, null);
-                Log.Info("Unity Detected - ioDriverUnityManager Initialized.");
+                //Log.Info("Unity Detected - ioDriverUnityManager Initialized.");
             }
 
-            /*
-            var dbg = GetTypeEx("UnityEngine.Debug");
-            if (dbg != null)
-            {
-                var lg = dbg.GetMethod("Log", new[] { typeof(string) });
-                var lgw = dbg.GetMethod("LogWarning", new[] { typeof(string) });
-                var lge = dbg.GetMethod("LogError", new[] { typeof(string) });
-                SetLogMethods(
-                    _msg => lg.Invoke(dbg, new object[] { _msg }),
-                    _msg => lgw.Invoke(dbg, new object[] { _msg }),
-                    _msg => lge.Invoke(dbg, new object[] { _msg }));
-            }
-             */
 
         }
-
-        if (InitDone) return;
-        InitDone = true;
 
         //Initialize Teacher
         typeof(Teacher).GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic)
@@ -541,7 +532,7 @@ public static partial class ioDriver
         typeof(Event).GetMethod("Init", BindingFlags.NonPublic | BindingFlags.Static)
             .Invoke(typeof(Event), null);
 
-        
+
         Log.Info("ioDriver Initialized");
     }
 
@@ -1356,7 +1347,7 @@ public static partial class ioDriver
                             " Current timescale is " + tsCheck);
                     secsSinceLastUpdate = 0;
                 }
-                if (secsSinceLastUpdate < 1/MaxUpdateFrequency) return;
+                if (secsSinceLastUpdate < 1 / MaxUpdateFrequency) return;
 
 
                 if (OnPump != null) OnPump();
