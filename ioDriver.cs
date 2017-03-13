@@ -14,6 +14,7 @@ public static partial class ioDriver
 {
     #region Fields
 
+
     private static Dictionary<string, string> DriverIDsByName = new Dictionary<string, string>();
     private static Dictionary<object, HashSet<string>> DriverIDsByObject = new Dictionary<object, HashSet<string>>
     {
@@ -28,6 +29,8 @@ public static partial class ioDriver
     private static Type m_UnityEngine;
     private static bool? m_UnityPresent;
     private static Func<bool> m_UnityMgrPresent;
+
+    private static float m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
 
     #endregion Fields
 
@@ -389,6 +392,25 @@ public static partial class ioDriver
     public static float Timescale
     {
         get { return Hooks.TimescaleDriver(); }
+    }
+
+    /// Get or set the maximum frequency for ioDriver to pump all running drivers and fire events.
+    /// IE. if the maximum frequency is set to 60 (Hz) then drivers and events will only be updated at a maximum
+    /// of 60 times per second, or maximum once every 16.67 milliseconds.  Cannot be less than or equal to zero.
+    public static float MaxUpdateFrequency
+    {
+        get { return m_MaxUpdateFrequency; }
+        set
+        {
+            var val = value;
+            if (val <= 0)
+            {
+                Log.Err("Maximum Update Frequency cannot be equal to or less than 0.  Setting default of '" +
+                        Defaults.MaxUpdateFrequency + "'");
+                m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
+            }
+            m_MaxUpdateFrequency = val;
+        }
     }
 
     #endregion Properties
@@ -1288,6 +1310,7 @@ public static partial class ioDriver
                 m_StartQueue = new Queue<DBase>();
 
                 var timescale = Defaults.Timescale;
+                MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
                 Hooks.TimescaleDriver = () => timescale;
 
                 m_LastUpdateTimestamp = 0;
@@ -1313,11 +1336,12 @@ public static partial class ioDriver
                     return;
                 }
 
-                Hooks.ProcessEvents();
+
 
                 var timeStamp = GetTimestampInSecs();
                 var secsSinceLastUpdate = (timeStamp - m_LastUpdateTimestamp) * Hooks.TimescaleDriver();
 
+                Hooks.ProcessEvents();
                 if (secsSinceLastUpdate < 0)
                 {
                     var tsCheck = Hooks.TimescaleDriver();
@@ -1325,6 +1349,7 @@ public static partial class ioDriver
                             " Current timescale is " + tsCheck);
                     secsSinceLastUpdate = 0;
                 }
+                if (secsSinceLastUpdate < 1/MaxUpdateFrequency) return;
 
                 var toDispose = new List<string>();
 
@@ -1592,6 +1617,8 @@ public static partial class ioDriver
 
         /// Default control magnitude, as percent of incoming segment length
         public static float BezierMagPct = 0.33f;
+
+        public static float MaxUpdateFrequency = 60;
 
         #endregion Fields
 
