@@ -559,7 +559,7 @@ public static class ioDriverFluency //TODO cleanup/split
         return _thisDriver;
     }
 
-
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
     public static T SetSplineMode<T>(this T _spline, ioDriver.Path.SplineMode _mode)
         where T : ioDriver.ISpline
     {
@@ -567,13 +567,16 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.EQSegmentLength"/> 
+    /// <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
     public static T SetModeEquidistant<T>(this T _spline, float _segmentLength)
         where T : ioDriver.ISpline
     {
         _spline.EQSegmentLength = _segmentLength;
         return _spline;
     }
-    
+
+    /// Fluency Method.  <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
     public static T SetModeEquidistant<T>(this T _spline)
         where T : ioDriver.ISpline
     {
@@ -581,6 +584,8 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SplineResolution"/> 
+    /// <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
     public static T SetModeMathematical<T>(this T _spline, int _resolution)
         where T : ioDriver.ISpline
     {
@@ -588,6 +593,7 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
+    /// Fluency Method.  <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
     public static T SetModeMathematical<T>(this T _spline)
         where T : ioDriver.ISpline
     {
@@ -595,6 +601,7 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.EQSegmentLength"/>
     public static T SetEQSegmentLength<T>(this T _spline, float _length)
         where T : ioDriver.ISpline
     {

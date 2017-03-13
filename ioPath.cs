@@ -720,6 +720,10 @@ public static partial class ioDriver
                 return m_FrameWaypoints.ToArray();
             }
 
+            /// <summary>
+            /// Offset all of this path's frame points by T and rebuild the path.
+            /// </summary>
+            /// <param name="_offset">Offset value</param>
             public void Offset(T _offset)
             {
                 for (int idx = 0; idx < m_FrameWaypoints.Count; ++idx)
@@ -904,9 +908,12 @@ public static partial class ioDriver
 
         }
 
+        /// Spline's point calculation mode.
         public enum SplineMode
         {
+            /// Calculate points so that the distance between them is the same (approximate).  <see cref="Spline{T}.EQSegmentLength"/>
             Equidistant,
+            /// Calculate points using equally spread percentages based on <see cref="Spline{T}.SplineResolution"/> and it's mathematical forumla.
             Mathematical
         }
 

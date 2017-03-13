@@ -210,8 +210,11 @@ public static partial class ioDriver
     /// and <see cref="DTransfer{TTar,TDri}.DriveInjector"/>
     public delegate T Injector<T>(T _value);
 
+    /// Delegate used for <see cref="OnPump"/> event.
     public delegate void OnPumpAction();
 
+    /// Called every "pump" operation.  Note that this is not fired if not enough time has passed to meet
+    /// the current <see cref="MaxUpdateFrequency"/> setting.
     public static event OnPumpAction OnPump;
 
     #region Nested Interfaces
@@ -563,7 +566,6 @@ public static partial class ioDriver
     public static void Pump()
     {
         Hooks.UpdateManager();
-        if (OnPump != null) OnPump();
     }
 
     /// Disregard any accrued time since the last update.
@@ -619,6 +621,12 @@ public static partial class ioDriver
         Log.Err("Stop driver '" + _nameOrID + "' failed.  Name/ID not found.");
     }
 
+    /// <summary>
+    /// Set the methods to be called for ioDriver's log functions.
+    /// </summary>
+    /// <param name="_logInfoMethod">Method for "info" level reporting.</param>
+    /// <param name="_logWarnMethod">Method for "warning" level reporting.</param>
+    /// <param name="_logErrMethod">Method for "error" level reporting.</param>
     public static void SetLogMethods(Action<string> _logInfoMethod, Action<string> _logWarnMethod, Action<string> _logErrMethod)
     {
         Log.LogInfoMethod = _logInfoMethod;
@@ -1341,7 +1349,6 @@ public static partial class ioDriver
                 var timeStamp = GetTimestampInSecs();
                 var secsSinceLastUpdate = (timeStamp - m_LastUpdateTimestamp) * Hooks.TimescaleDriver();
 
-                Hooks.ProcessEvents();
                 if (secsSinceLastUpdate < 0)
                 {
                     var tsCheck = Hooks.TimescaleDriver();
@@ -1350,6 +1357,11 @@ public static partial class ioDriver
                     secsSinceLastUpdate = 0;
                 }
                 if (secsSinceLastUpdate < 1/MaxUpdateFrequency) return;
+
+
+                if (OnPump != null) OnPump();
+                Hooks.ProcessEvents();
+
 
                 var toDispose = new List<string>();
 
