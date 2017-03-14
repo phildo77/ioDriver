@@ -27,8 +27,8 @@ public static partial class ioDriver
     private static bool m_DebugEnableGlobal = false;
 
     private static Type m_UnityEngine;
-    private static bool? m_UnityPresent;
-    private static Func<bool> m_UnityMgrPresent;
+    private static bool? m_UnityPresent = null;
+    private static bool m_UnityMgrPresent = false;
 
     private static float m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
 
@@ -494,11 +494,9 @@ public static partial class ioDriver
 
             var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
             var umInstFld = um.GetField("m_Instance", BindingFlags.NonPublic | BindingFlags.Static);
-            m_UnityMgrPresent = () => umInstFld.GetValue(um) != null;
+            m_UnityMgrPresent = (bool)umInstFld.GetValue(um);
 
             InitDone = false;
-
-
         }
 
 
@@ -507,7 +505,7 @@ public static partial class ioDriver
         InitDone = true;
 
         //Do Unity Init if present
-        if (m_UnityPresent.Value && !m_UnityMgrPresent())
+        if (m_UnityPresent.Value && !m_UnityMgrPresent)
         {
             var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
             if (um != null)
