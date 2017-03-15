@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Text;
 
 
-
 /// <summary>
 /// Drive or tween almost anything!
 /// </summary>
@@ -412,6 +411,10 @@ public static partial class ioDriver
                         Defaults.MaxUpdateFrequency + "'");
                 m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
             }
+            else if (val == Double.PositiveInfinity)
+            {
+                val = float.MaxValue;
+            }
             m_MaxUpdateFrequency = val;
         }
     }
@@ -493,29 +496,29 @@ public static partial class ioDriver
             m_UnityPresent = m_UnityEngine != null;
 
             var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
+            Log.Err("Um is " + um);
             var umInstFld = um.GetField("m_Instance", BindingFlags.NonPublic | BindingFlags.Static);
-            m_UnityMgrPresent = (bool)umInstFld.GetValue(um);
+            Log.Err("Um Inst fld is " + umInstFld);
+            m_UnityMgrPresent = (umInstFld.GetValue(um) != null);
 
             InitDone = false;
         }
-
-
-
-        if (InitDone) return;
-        InitDone = true;
 
         //Do Unity Init if present
         if (m_UnityPresent.Value && !m_UnityMgrPresent)
         {
             var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
             if (um != null)
-            {
                 um.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic).Invoke(um, null);
-                //Log.Info("Unity Detected - ioDriverUnityManager Initialized.");
-            }
 
 
         }
+
+
+        if (InitDone) return;
+        InitDone = true;
+
+
 
         //Initialize Teacher
         typeof(Teacher).GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic)
@@ -1345,7 +1348,9 @@ public static partial class ioDriver
                             " Current timescale is " + tsCheck);
                     secsSinceLastUpdate = 0;
                 }
-                if (secsSinceLastUpdate < 1 / MaxUpdateFrequency) return;
+
+                var foo = 1f / MaxUpdateFrequency;
+                if (secsSinceLastUpdate < foo) return;
 
 
                 if (OnPump != null) OnPump();

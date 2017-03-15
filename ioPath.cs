@@ -649,7 +649,7 @@ public static partial class ioDriver
                 get { return m_FrameSegments.ToArray(); }
             }
 
-            /// Get frame segment that lies at specified frame pct.
+            /// Get frame segment that lies at specified frame pct. <seealso cref="GetPathSegmentAt"/>
             public Segment GetFrameSegmentAt(float _pct)
             {
                 if (_pct < 0f || _pct > 1f)
@@ -670,6 +670,20 @@ public static partial class ioDriver
                     throw new ArgumentOutOfRangeException("Waypoint index out of range");
                 if (_index == 0) return 0f;
                 return _index == (Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1) ? 1f : m_FrameSegments[_index].PctStart;
+            }
+
+            /// Get path segment that lies at specified path pct. <seealso cref="GetFrameSegmentAt"/>
+            public Segment GetPathSegmentAt(float _pct)
+            {
+                if (_pct < 0f || _pct > 1f)
+                    throw new ArgumentOutOfRangeException("_pct must be between 0 and 1.");
+                if (_pct == 0) return m_PathSegments[0];
+                if (_pct == 1) return m_PathSegments[m_PathSegments.Count - 1];
+
+                foreach (Segment seg in m_PathSegments)
+                    if (seg.PctEnd > _pct)
+                        return seg;
+                return m_PathSegments[m_PathSegments.Count - 1];
             }
 
             /// Add new frame waypoint
