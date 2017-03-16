@@ -30,6 +30,7 @@ public static partial class ioDriver
     private static bool m_UnityMgrPresent = false;
 
     private static float m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
+    private static float m_TimescaleGlobal = Defaults.Timescale;
 
     #endregion Fields
 
@@ -384,16 +385,21 @@ public static partial class ioDriver
         get { return Hooks.SecsSinceStart(); }
     }
 
-    /// <summary>
-    /// Gets or sets the global ioDriver timescale. 
-    /// </summary>
-    /// NOTE:  If the global <see cref="SetTimescale(System.Func{float})">timescale driver</see> is set,  this will be overridden by the timescale driver.
-    /// NOTE:  Any drivers with <see cref="DBase.UseManualTimescale">manual timescale</see> 
-    /// set to true will ignore this value and use their <see cref="DBase.ManualTimescale(Func{float})">manual timescale</see>.
-    /// <seealso cref="SetTimescale(System.Func{float})"/><seealso cref="DBase.UseManualTimescale"/><seealso cref="DBase.ManualTimescale(Func{float})"/>
-    public static float Timescale
+    public static float TimescaleGlobal
     {
-        get { return Hooks.TimescaleDriver(); }
+        get { return m_TimescaleGlobal; }
+        set
+        {
+            if (m_TimescaleGlobal == value) return;
+            if (value < 0)
+            {
+                Log.Err("Global Timescale cannot be less than 0.  Setting default of '" + Defaults.Timescale + "'");
+                m_TimescaleGlobal = Defaults.Timescale;
+                return;
+            }
+            m_TimescaleGlobal = value;
+
+        }
     }
 
     /// Get or set the maximum frequency for ioDriver to pump all running drivers and fire events.
@@ -553,7 +559,7 @@ public static partial class ioDriver
     /// 
     /// In Unity, this is automatically hooked up to a monobehaviour (<see cref="ioDriverUnityManager">ioDriverUnityManager</see>) 
     /// that "pumps" this function every frame. 
-    /// All drivers follow Unity's timescale unless otherwise specified by setting their timescale to manual. See <see cref="DBase.UseManualTimescale"/> and <see cref="DBase.ManualTimescale(Func{float})"/>
+    /// All drivers follow Unity's timescale unless otherwise specified by setting their timescale to local. See <see cref="DBase.UseTimescaleLocal"/> and <see cref="DBase.TimescaleLocal"/>
     /// </summary>
     public static void Pump()
     {
@@ -565,37 +571,6 @@ public static partial class ioDriver
     public static void ResetTimestamp()
     {
         Hooks.ResetTimestamp();
-    }
-
-    /// <summary>
-    /// Set the global timescale with a dynamic method.
-    /// </summary>
-    /// The function paramater is used to set the timescale for all drivers not set to <see cref="DBase.UseManualTimescale">use manual timescale</see>.
-    /// <seealso cref="SetTimescale(float)"/><seealso cref="DBase.UseManualTimescale"/><seealso cref="DBase.ManualTimescale(Func{float})"/>
-    /// If the environment detected is unity, the following autmatically done:
-    ///! @code
-    /// SetTimescale(() => UnityEngine.Time.timeScale);
-    /// @endcode
-    /// <param name="_timescaleMethod">Method to read used to set global timescale on every update.</param>
-    public static void SetTimescale(Func<float> _timescaleMethod)
-    {
-        Hooks.TimescaleDriver = _timescaleMethod;
-    }
-
-    /// <summary>
-    /// Set the global timescale to a constant value;
-    /// </summary>
-    /// The function paramater is used to set the timescale for all drivers not set to <see cref="DBase.UseManualTimescale">use manual timescale</see>.
-    /// <seealso cref="SetTimescale(Func{float})"/><seealso cref="DBase.UseManualTimescale"/><seealso cref="DBase.ManualTimescale(Func{float})"/>
-    /// <param name="_timescale"></param>
-    public static void SetTimescale(float _timescale)
-    {
-        if (_timescale < 0)
-        {
-            Log.Err("Timescale cannot be less than 0.");
-            return;
-        }
-        Hooks.TimescaleDriver = () => _timescale;
     }
 
     /// <summary>
@@ -835,8 +810,7 @@ public static partial class ioDriver
 
         private bool m_Dispose;
 
-        /// Function that is called to retrieve timescale if <see cref="UseManualTimescale"/> is set to true.
-        private Func<float> m_ManualTimescale;
+        private float m_TimescaleLocal;
 
         /// If set to true the driver will not drive nor will it account for any time passage.
         private bool m_Paused;
@@ -861,8 +835,8 @@ public static partial class ioDriver
             Tag = Defaults.Tag;
             Duration = Defaults.Duration;
             Delay = Defaults.Delay;
-            m_ManualTimescale = Defaults.ManualTimescale;
-            UseManualTimescale = Defaults.UseManualTimescale;
+            m_TimescaleLocal = Defaults.Timescale;
+            UseTimescaleLocal = Defaults.UseTimescaleLocal;
             ElapsedTime = 0;
             m_TargetInfo = new TargetInfo();
             m_CustomDebugInfo = new Dictionary<string, Func<object>>();
@@ -959,10 +933,20 @@ public static partial class ioDriver
             protected set;
         }
 
-        /// Set driver's timescale.  Not used if <see cref="UseManualTimescale"/> is set to false (default).  Setting this also sets <see cref="UseManualTimescale"/> to true;
-        public float ManualTimescaleCurrent
+        /// Get/Set driver's local timescale.  Not used if <see cref="UseTimescaleLocal"/> is set to false (default).  Setting this also sets <see cref="UseTimescaleLocal"/> to true;
+        public float TimescaleLocal
         {
-            get { return m_ManualTimescale(); }
+            get { return m_TimescaleLocal; }
+            set
+            {
+                if (m_TimescaleLocal == value) return;
+                if (value < 0)
+                {
+                    Log.Err("Driver local timescale cannot be less than zero.  Setting to default of '" + Defaults.Timescale + "'");
+                    m_TimescaleLocal = Defaults.Timescale;
+                }
+                m_TimescaleLocal = value;
+            }
         }
 
         /// User defined name.  Set to ID if not user set.  Must be unique among all running drivers.
@@ -1077,8 +1061,8 @@ public static partial class ioDriver
             get { return m_TargetInfo.TargetObject; }
         }
 
-        /// Set to true to use manual timescale mode, false to use global timescale. <seealso cref="DBase.ManualTimescale(Func{float})"/> <seealso cref="Timescale"/>
-        public bool UseManualTimescale
+        /// Set to true to use local timescale mode, false to use global timescale. <seealso cref="DBase.TimescaleLocal"/> <seealso cref="TimescaleGlobal"/>
+        public bool UseTimescaleLocal
         {
             get;
             set;
@@ -1172,19 +1156,7 @@ public static partial class ioDriver
         {
             return new Dictionary<string, Func<object>>(m_CustomDebugInfo);
         }
-
-        /// Set manual timescale for this driver as constant float
-        public void ManualTimescale(float _timescale)
-        {
-            m_ManualTimescale = () => _timescale;
-        }
-
-        /// Set manual timescale for this driver as dynamic function.
-        public void ManualTimescale(Func<float> _timescaleFunc)
-        {
-            m_ManualTimescale = _timescaleFunc;
-        }
-
+        
         /// <summary>
         /// Pause this driver for specified amount of time in seconds.
         /// </summary>
@@ -1261,8 +1233,8 @@ public static partial class ioDriver
 
         private void UpdateDriver(float _secsSinceLastUpdate)
         {
-            if (UseManualTimescale)
-                SecsSinceLastUpdate = _secsSinceLastUpdate / Hooks.TimescaleDriver() * m_ManualTimescale();
+            if (UseTimescaleLocal)
+                SecsSinceLastUpdate = _secsSinceLastUpdate / TimescaleGlobal * TimescaleLocal;
             else
                 SecsSinceLastUpdate = _secsSinceLastUpdate;
 
@@ -1309,9 +1281,7 @@ public static partial class ioDriver
             {
                 m_StartQueue = new Queue<DBase>();
 
-                var timescale = Defaults.Timescale;
                 MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
-                Hooks.TimescaleDriver = () => timescale;
 
                 m_LastUpdateTimestamp = 0;
                 Hooks.UpdateManager = UpdateManager;
@@ -1339,13 +1309,12 @@ public static partial class ioDriver
 
 
                 var timeStamp = GetTimestampInSecs();
-                var secsSinceLastUpdate = (timeStamp - m_LastUpdateTimestamp) * Hooks.TimescaleDriver();
+                var secsSinceLastUpdate = (timeStamp - m_LastUpdateTimestamp) * TimescaleGlobal;
 
                 if (secsSinceLastUpdate < 0)
                 {
-                    var tsCheck = Hooks.TimescaleDriver();
                     Log.Err("Calculated seconds since last update less than zero.  Forcing zero." +
-                            " Current timescale is " + tsCheck);
+                            " Current timescale is " + TimescaleGlobal);
                     secsSinceLastUpdate = 0;
                 }
 
@@ -1603,11 +1572,25 @@ public static partial class ioDriver
         /// Default managed event priority
         public static uint EventPriority = 10;
 
-        /// <summary>Default timescale</summary>
-        public static float Timescale = 1f;
+        private static float m_Timescale = 1;
 
-        /// <summary>Default timescale.</summary>
-        public static Func<float> ManualTimescale = Hooks.TimescaleDriver;
+        /// <summary>Default timescale.  Cannot be less than 0.</summary>
+        public static float Timescale
+        {
+            get { return m_Timescale; }
+            set
+            {
+                if (m_Timescale == value) return;
+                if (value < 0)
+                {
+                    Log.Err("Global Timescale cannot be less than 0.  Setting to 1.");
+                    m_Timescale = 1f;
+                    return;
+                }
+                m_Timescale = value;
+            }
+        
+        }
 
         /// <summary>Default update behavior.</summary>
         public static bool ManualUpdate = false;
@@ -1619,7 +1602,7 @@ public static partial class ioDriver
         public static object Tag = "NO TAG";
 
         /// <summary>Default timescale behavior.</summary>
-        public static bool UseManualTimescale = false;
+        public static bool UseTimescaleLocal = false;
 
         /// Default control magnitude, as percent of incoming segment length
         public static float BezierMagPct = 0.33f;
@@ -2308,7 +2291,6 @@ public static partial class ioDriver
         public static Action ResetTimestamp;
         public static Func<float> SecsSinceStart;
         public static Action UpdateManager;
-        public static Func<float> TimescaleDriver;
 
         #endregion Fields
     }

@@ -277,29 +277,18 @@ public static class ioDriverFluency //TODO cleanup/split
         return _thisDriver;
     }
 
-    /// Fluency method. See <see cref="ioDriver.DBase.ManualTimescale(float)"/>
-    public static T SetManualTimeScale<T>(this T _thisDriver, float _timescale, bool _useManualTimescale = true) where T : ioDriver.DBase
+    /// Fluency method. See <see cref="ioDriver.DBase.TimescaleLocal"/>
+    public static T SetTimescaleLocal<T>(this T _thisDriver, float _timescale, bool _useTimescaleLocal = true) where T : ioDriver.DBase
     {
-        _thisDriver.ManualTimescale(_timescale);
-        _thisDriver.UseManualTimescale = _useManualTimescale;
+        _thisDriver.TimescaleLocal = _timescale;
+        _thisDriver.UseTimescaleLocal = _useTimescaleLocal;
         return _thisDriver;
     }
 
-    /// Fluency method. See <see cref="ioDriver.DBase.ManualTimescale(Func{float})"/>
-    public static T SetManualTimescale<T>(this T _thisDriver, Func<float> _timescaleFunc, bool _useManualTimescale = true) where T : ioDriver.DBase
-    {
-        _thisDriver.ManualTimescale(_timescaleFunc);
-        _thisDriver.UseManualTimescale = _useManualTimescale;
-        return _thisDriver;
-
-    }
-
-
-
-    /// Sets <see cref="ioDriver.DBase.UseManualTimescale">UseManualTimescale</see> of this driver to false.
+    /// Sets <see cref="ioDriver.DBase.UseTimescaleLocal">UseTimescaleLocal</see> of this driver to false.
     public static T SetUseGlobalTimescale<T>(this T _thisDriver) where T : ioDriver.DBase
     {
-        _thisDriver.UseManualTimescale = false;
+        _thisDriver.UseTimescaleLocal = false;
         return _thisDriver;
     }
 
