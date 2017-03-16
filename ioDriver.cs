@@ -500,14 +500,16 @@ public static partial class ioDriver
         {
             m_UnityEngine = Type.GetType("UnityEngine.Transform, UnityEngine");
             m_UnityPresent = m_UnityEngine != null;
+            if (m_UnityPresent.Value)
+            {
+                var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
+                Log.Err("Um is " + um);
+                var umInstFld = um.GetField("m_Instance", BindingFlags.NonPublic | BindingFlags.Static);
+                Log.Err("Um Inst fld is " + umInstFld);
+                m_UnityMgrPresent = (umInstFld.GetValue(um) != null);
 
-            var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
-            Log.Err("Um is " + um);
-            var umInstFld = um.GetField("m_Instance", BindingFlags.NonPublic | BindingFlags.Static);
-            Log.Err("Um Inst fld is " + umInstFld);
-            m_UnityMgrPresent = (umInstFld.GetValue(um) != null);
-
-            InitDone = false;
+                InitDone = false;
+            }
         }
 
         //Do Unity Init if present

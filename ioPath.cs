@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 
@@ -343,21 +344,21 @@ public static partial class ioDriver
         /// <summary>
         /// Constructor using target action. See <see cref="DTween{TTar}"/>
         /// </summary>
-        /// <param name="_waypoints">PathPoints to tween over</param>
-        public DTweenPath(Action<TTar> _tarAction, Path.Base<TTar> _waypoints, float _cycleDuration, string _name = null)
+        /// <param name="_path">Path to tween through</param>
+        public DTweenPath(Action<TTar> _tarAction, Path.Base<TTar> _path, float _cycleDuration, string _name = null)
             : base(_tarAction, _cycleDuration, _name)
         {
-            m_Path = _waypoints;
+            m_Path = _path;
         }
 
         /// <summary>
         /// Constructor using expression. See <see cref="DTween{TTar}"/>
         /// </summary>
-        /// <param name="_waypoints">PathPoints to tween over</param>
-        public DTweenPath(Expression<Func<TTar>> _targetExpr, Path.Base<TTar> _waypoints, float _cycleDuration, string _name = null)
+        /// <param name="_path">Path to tween through</param>
+        public DTweenPath(Expression<Func<TTar>> _targetExpr, Path.Base<TTar> _path, float _cycleDuration, string _name = null)
             : base(_targetExpr, _cycleDuration, _name)
         {
-            m_Path = _waypoints;
+            m_Path = _path;
         }
 
         #endregion Constructors
@@ -654,48 +655,49 @@ public static partial class ioDriver
             {
                 if (_pct < 0f || _pct > 1f)
                     throw new ArgumentOutOfRangeException("_pct must be between 0 and 1.");
-                if (_pct == 0) return m_FrameSegments[0];
-                if (_pct == 1) return m_FrameSegments[m_FrameSegments.Count - 1];
+                if (_pct == 0) return FrameSegments[0];
+                if (_pct == 1) return FrameSegments[FrameSegments.Length - 1];
 
-                foreach (Segment seg in m_FrameSegments)
+                foreach (Segment seg in FrameSegments)
                     if (seg.PctEnd > _pct)
                         return seg;
-                return m_FrameSegments[m_FrameSegments.Count - 1];
-            }
-
-            /// Get percent along frame for specified frame waypoint
-            public float GetFrameWaypointPct(int _index)
-            {
-                if (_index < 0f || Closed ? _index > m_FrameWaypoints.Count : _index > m_FrameWaypoints.Count - 1)
-                    throw new ArgumentOutOfRangeException("Waypoint index out of range");
-                if (_index == 0) return 0f;
-                return _index == (Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1) ? 1f : m_FrameSegments[_index].PctStart;
+                return FrameSegments[FrameSegments.Length - 1];
             }
 
             /// Get path segment that lies at specified path pct. <seealso cref="GetFrameSegmentAt"/>
             public Segment GetPathSegmentAt(float _pct)
             {
                 if (_pct < 0f || _pct > 1f)
-                    throw new ArgumentOutOfRangeException("_pct must be between 0 and 1.");
-                if (_pct == 0) return m_PathSegments[0];
-                if (_pct == 1) return m_PathSegments[m_PathSegments.Count - 1];
+                {
+                    Log.Err("_pct out of range.  Must be between 0 and 1f.  Returning null.");
+                    return null;
+                }
+                if (_pct == 0) return PathSegments[0];
+                if (_pct == 1) return PathSegments[PathSegments.Length - 1];
 
-                foreach (Segment seg in m_PathSegments)
+                foreach (Segment seg in PathSegments)
                     if (seg.PctEnd > _pct)
                         return seg;
-                return m_PathSegments[m_PathSegments.Count - 1];
+                return PathSegments[PathSegments.Length - 1];
             }
+
+            /// Get percent along frame for specified frame waypoint
+            public float GetFrameWaypointPct(int _index)
+            {
+                if (_index < 0f || Closed ? _index > m_FrameWaypoints.Count : _index > m_FrameWaypoints.Count - 1)
+                {
+                    Log.Err("Waypoint index out of range.  Received '" + _index + "'");
+                    return float.NaN;
+                }
+                if (_index == 0) return 0f;
+                return _index == (Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1) ? 1f : m_FrameSegments[_index].PctStart;
+            }
+
+            
 
             /// Add new frame waypoint
             public virtual void AddFrameWaypoint(T _waypoint)
             {
-#if ioTRIAL
-                if (m_FrameWaypoints.Count >= MAX_PATH_POINT_COUNT)
-                {
-                    Log.Warn("Maximum " + MAX_PATH_POINT_COUNT + " points in paths for trial version.",true);
-                    return;
-                }
-#endif
                 m_FrameWaypoints.Add(_waypoint);
                 Build();
             }
@@ -703,13 +705,6 @@ public static partial class ioDriver
             /// Insert new frame waypoint at specified index.
             public virtual void InsertFrameWaypoint(int _index, T _waypoint)
             {
-#if ioTRIAL
-                if (m_FrameWaypoints.Count >= MAX_PATH_POINT_COUNT)
-                {
-                    Log.Warn("Maximum " + MAX_PATH_POINT_COUNT + " points in paths for trial version.",true);
-                    return;
-                }
-#endif
                 m_FrameWaypoints.Insert(_index, _waypoint);
                 Build();
             }
@@ -751,7 +746,7 @@ public static partial class ioDriver
             {
                 if (_pct < 0f || _pct > 1f)
                     throw new ArgumentOutOfRangeException("_pct",
-                        "Base.FrameWaypointValueAt(float) : must be between 0 and 1, inclusive.");
+                        "LerpPath : must be between 0 and 1, inclusive.");
                 if (_pct == 0f) return _points[0];
                 if (_pct == 1f) return _closed ? _points[0] : _points[_points.Count - 1];
 
@@ -762,21 +757,22 @@ public static partial class ioDriver
                 while (curLen < tgtLen)
                     curLen += _segments[segIdx++].Length;
 
-                curLen -= _segments[segIdx - 1].Length;
+                var tgtSeg = _segments[segIdx - 1];
+                curLen -= tgtSeg.Length;
                 var segTgtLen = tgtLen - curLen;
 
-                T fromVal = _points[segIdx - 1];
+                T fromVal = _points[tgtSeg.FromIdx];
                 T toVal;
-                if (_closed && segIdx == _points.Count)
+                if (_closed && ((tgtSeg.FromIdx + 1) == _points.Count))
                     toVal = _points[0];
                 else
-                    toVal = _points[segIdx];
+                    toVal = _points[tgtSeg.FromIdx + 1];
 
                 return DTypeInfo<T>.Lerp(fromVal, toVal, segTgtLen / _segments[segIdx - 1].Length);
             }
 
             /// <summary>
-            /// Get this path's value at specified percent along path via PathPoints.
+            /// Get this path's value at specified percent along path via <see cref="PathPoints"/>.
             /// </summary>
             /// <param name="_pct">Percent along path (0 to 1)</param>
             /// <returns></returns>
@@ -792,6 +788,9 @@ public static partial class ioDriver
             /// <returns></returns>
             protected T FrameWaypointValueAt(float _pct)
             {
+                var frmPts = ToList(m_FrameWaypoints);
+                if (Closed)
+                    frmPts.Add(m_FrameWaypoints[0]);
                 return LerpPath(_pct, m_FrameWaypoints, m_FrameSegments, m_FrameLength, m_Closed);
             }
 
@@ -827,7 +826,7 @@ public static partial class ioDriver
                 UpdatePath();
             }
 
-            /// Override to update <see cref="PathPoints"/> and <see cref="m_PathSegments"/> here.
+            /// Override to update <see cref="PathPoints"/> and <see cref="PathSegments"/> here.
             protected abstract void UpdatePath();
 
             /// Object representing segment between two points on a <see cref="Base{T}"/>.
@@ -869,6 +868,20 @@ public static partial class ioDriver
                     PctStart = _pctStart;
                     PctEnd = _pctEnd;
                     Length = _length;
+                }
+
+                /// Copy constructor
+                public Segment(Segment _segment)
+                {
+                    FromIdx = _segment.FromIdx;
+                    PctStart = _segment.PctStart;
+                    PctEnd = _segment.PctEnd;
+                    Length = _segment.Length;
+                }
+
+                public override string ToString()
+                {
+                    return "Seg - FrmIdx: " + FromIdx + " PctStart: " + PctStart + " PctEnd: " + PctEnd + " Len: " + Length;
                 }
             }
 
@@ -1028,12 +1041,11 @@ public static partial class ioDriver
             /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
             protected override void UpdatePath()
             {
-                m_PathSegments = new List<Segment>();
-
+                
                 if (m_SplineMode == SplineMode.Equidistant)
                 {
 
-                    if (m_EQSegmentLength == 0)
+                    if (m_EQSegmentLength <= 0)
                         m_EQSegmentLength = 0.1f;
 
                     float allowedError = m_EQSegmentLength * 0.05f;
@@ -1051,6 +1063,8 @@ public static partial class ioDriver
                     var pctA = -1f;
                     var pctB = -1f;
                     var path = new List<T> { m_FrameWaypoints[0] };
+                    var totalLength = 0f;
+                    var lengths = new List<float>();
                     while (!done)
                     {
                         var pctSpan = toCheckPct - fromCheckPct;
@@ -1089,7 +1103,9 @@ public static partial class ioDriver
 
                         }
                         lenA = lenB = pctA = pctB = -1f;
-                        m_PathSegments.Add(new Segment(m_PathSegments.Count, fromCheckPct, toCheckPct, len));
+                        //m_PathSegments.Add(new Segment(m_PathSegments.Count, fromCheckPct, toCheckPct, len));
+                        totalLength += len;
+                        lengths.Add(len);
                         path.Add(SplineValueAt(toCheckPct));
 
                         if (done)
@@ -1098,8 +1114,19 @@ public static partial class ioDriver
                         fromCheckPct = toCheckPct;
                         toCheckPct = fromCheckPct + nextPctAdder;
                     }
-
                     PathPoints = path.ToArray();
+
+                    //Update Segment pct
+                    var progressLen = 0f;
+                    m_PathSegments = new List<Segment>();
+                    for (int idx = 0; idx < PathPoints.Length - 1; ++idx)
+                    {
+                        var frmPct = progressLen/totalLength;
+                        progressLen += lengths[idx];
+                        var toPct = progressLen/totalLength;
+                        m_PathSegments.Add(new Segment(idx, frmPct, toPct, lengths[idx]));
+                    }
+
                 }
                 else
                 {
