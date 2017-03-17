@@ -65,22 +65,8 @@ public static partial class ioDriver
             set;
         }
 
-        /// See <see cref="Path.Spline{T}.EQSegmentLength"/>
-        float EQSegmentLength
-        {
-            get;
-            set;
-        }
-
-        /// See <see cref="Path.Spline{T}.ModeEQ"/>
-        Path.SplineMode SplineMode
-        {
-            get;
-            set;
-        }
-
-        /// See <see cref="Path.Spline{T}.SplineResolution"/>
-        int SplineResolution
+        /// See <see cref="Path.Spline{T}.SegmentLength"/>
+        float SegmentLength
         {
             get;
             set;
@@ -757,6 +743,8 @@ public static partial class ioDriver
                 while (curLen < tgtLen)
                     curLen += _segments[segIdx++].Length;
 
+                if (curLen == 0) return _points[0];
+
                 var tgtSeg = _segments[segIdx - 1];
                 curLen -= tgtSeg.Length;
                 var segTgtLen = tgtLen - curLen;
@@ -935,15 +923,6 @@ public static partial class ioDriver
 
         }
 
-        /// Spline's point calculation mode.
-        public enum SplineMode
-        {
-            /// Calculate points so that the distance between them is the same (approximate).  <see cref="Spline{T}.EQSegmentLength"/>
-            Equidistant,
-            /// Calculate points using equally spread percentages based on <see cref="Spline{T}.SplineResolution"/> and it's mathematical forumla.
-            Mathematical
-        }
-
         /// <summary>
         /// Base spline object.
         /// </summary>
@@ -953,14 +932,11 @@ public static partial class ioDriver
             /// Backing field for <see cref="DimsToSpline"/>
             protected int[] m_DimsToSpline;
 
-            /// Backing field for <see cref="SplineResolution"/><seealso cref="Defaults.SplineResolution"/>
-            protected int m_SplineResolution = Defaults.SplineResolution;
+            /// Backing field for <see cref="SegmentLength"/><seealso cref="Defaults.SegmentLength"/>
+            protected float m_SegmentLength = Defaults.SegmentLength;
 
-            /// Backing field for <see cref="EQSegmentLength"/><seealso cref="Defaults.EQSegmentLength"/>
-            protected float m_EQSegmentLength = Defaults.EQSegmentLength;
+            private float m_SegmentAccuracy = Defaults.SegmentAccuracy;
 
-            /// Backing field for <see cref="ModeEQ"/>
-            protected SplineMode m_SplineMode = SplineMode.Equidistant;
 
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build"/> is not called during construction.
@@ -971,48 +947,41 @@ public static partial class ioDriver
             {
                 m_DimsToSpline = CheckDims(null);
             }
-
-            /// Get/Set resolution of samples when not in equidistant mode. 
-            /// Set changes spline mode to <see cref="ioDriver.Path.SplineMode.Mathematical"/> 
-            /// Calls <see cref="UpdatePath"/> on change
-            public int SplineResolution
-            {
-                get { return m_SplineResolution; }
-                set
-                {
-                    if (m_SplineResolution == value) return;
-                    m_SplineResolution = value;
-                    m_SplineMode = SplineMode.Mathematical;
-                    UpdatePath();
-                }
-            }
-
-            /// Get/Set equidistant segment lengths.  
-            /// Set changes spline mode to <see cref="ioDriver.Path.SplineMode.Equidistant"/> 
+            
+            /// Get/Set spline segment lengths.  
             /// Calls <see cref="UpdatePath"/> on change.
-            public float EQSegmentLength
+            /// Setting this to a new value will rebuild the spline.
+            public float SegmentLength
             {
-                get { return m_EQSegmentLength; }
+                get { return m_SegmentLength; }
                 set
                 {
-                    if (m_EQSegmentLength == value) return;
-                    m_EQSegmentLength = value;
-                    m_SplineMode = SplineMode.Equidistant;
+                    if (m_SegmentLength == value) return;
+                    m_SegmentLength = value;
                     UpdatePath();
                 }
             }
 
-            /// Get/Toggle this spline into/out of equidistant mode. Calls <see cref="UpdatePath"/> on change.
-            public SplineMode SplineMode
+            /// Get/Set the percentage of accuracy when calculating segments lengths.  Between 0 and 1f.  Closer to zero will be more accurate but will be less efficient.
+            /// ie. Segments will be of length of 2.0f +/- 0.1 with <see cref="SegmentLength"/> of 2.0f and Segment Accuracy of 0.05
+            /// On set, will rebuild the spline if new value is less than current value.  Will not rebuild otherwise.
+            public float SegmentAccuracy
             {
-                get { return m_SplineMode; }
-
+                get { return m_SegmentAccuracy; }
                 set
                 {
-                    if (m_SplineMode == value) return;
-                    m_SplineMode = value;
-                    UpdatePath();
+                    if (value == m_SegmentAccuracy) return;
+                    if (m_SegmentAccuracy <= 0 || m_SegmentAccuracy >= 0.9999f)
+                    {
+                        Log.Err("Segment accuracy cannot be less than zero and must be less than 1.  Setting default of '" + Defaults.SegmentAccuracy + "'");
+                        m_SegmentAccuracy = Defaults.SegmentAccuracy;
+                        return;
+                    }
+                    if (value < m_SegmentAccuracy)
+                        UpdatePath();
+                    m_SegmentAccuracy = value;
                 }
+            
             }
 
             /// List of dimensions to be splined from frame waypoints.
@@ -1031,9 +1000,11 @@ public static partial class ioDriver
 
             /// <summary>
             /// Returns value of spline at specified percentage along spline.
-            /// Abstract - Override to implement.
+            /// Abstract - Override to implement.  Built in splines (see <see cref="Bezier{T}"/> and <see cref="Cubic{T}"/>) caluclate value using
+            /// Spline's mathematical formula.  This will not produce the same result as <see cref="Base{T}.ValueAt"/>, that calculation is done using 
+            /// linear, eqidistant segments.
             /// </summary>
-            /// <param name="_pct">Percentage along spline (0 to 1)</param>
+            /// <param name="_pct">Percentage along spline (0 to 1f)</param>
             /// <returns>Value at specified percentage</returns>
             public abstract T SplineValueAt(float _pct);
 
@@ -1041,116 +1012,95 @@ public static partial class ioDriver
             /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
             protected override void UpdatePath()
             {
-                
-                if (m_SplineMode == SplineMode.Equidistant)
+
+                if (m_SegmentLength <= 0)
+                    m_SegmentLength = 0.1f;
+
+                float allowedError = m_SegmentLength * m_SegmentAccuracy;
+
+                float estLen = m_FrameLength;
+
+                float toCheckPct = m_SegmentLength / estLen;
+                float fromCheckPct = 0;
+
+                bool done = false;
+                var min = m_SegmentLength - allowedError;
+                var max = m_SegmentLength + allowedError;
+                var lenA = -1f;
+                var lenB = -1f;
+                var pctA = -1f;
+                var pctB = -1f;
+                var path = new List<T> { m_FrameWaypoints[0] };
+                var totalLength = 0f;
+                var lengths = new List<float>();
+                while (!done)
                 {
+                    var pctSpan = toCheckPct - fromCheckPct;
+                    var len = DTypeInfo<T>.Length(SplineValueAt(fromCheckPct), SplineValueAt(toCheckPct));
 
-                    if (m_EQSegmentLength <= 0)
-                        m_EQSegmentLength = 0.1f;
-
-                    float allowedError = m_EQSegmentLength * 0.05f;
-
-                    float estLen = m_FrameLength;
-
-                    float toCheckPct = m_EQSegmentLength / estLen;
-                    float fromCheckPct = 0;
-
-                    bool done = false;
-                    var min = m_EQSegmentLength - allowedError;
-                    var max = m_EQSegmentLength + allowedError;
-                    var lenA = -1f;
-                    var lenB = -1f;
-                    var pctA = -1f;
-                    var pctB = -1f;
-                    var path = new List<T> { m_FrameWaypoints[0] };
-                    var totalLength = 0f;
-                    var lengths = new List<float>();
-                    while (!done)
+                    if (toCheckPct >= 1f && len <= max)
                     {
-                        var pctSpan = toCheckPct - fromCheckPct;
-                        var len = DTypeInfo<T>.Length(SplineValueAt(fromCheckPct), SplineValueAt(toCheckPct));
 
-                        if (toCheckPct >= 1f && len <= max)
+                        toCheckPct = 1f;
+                        done = true;
+
+                    }
+                    else if (len > max)
+                    {
+                        lenB = len;
+                        pctB = toCheckPct;
+                        if (lenA != -1)
                         {
-
-                            toCheckPct = 1f;
-                            done = true;
-
-                        }
-                        else if (len > max)
-                        {
-                            lenB = len;
-                            pctB = toCheckPct;
-                            if (lenA != -1)
-                            {
-                                toCheckPct = pctA + (pctB - pctA) / 2;
-                                continue;
-                            }
-                            toCheckPct = fromCheckPct + pctSpan * m_EQSegmentLength / len;
+                            toCheckPct = pctA + (pctB - pctA) / 2;
                             continue;
                         }
-                        else if (len < min)
-                        {
-                            lenA = len;
-                            pctA = toCheckPct;
-                            if (lenB != -1)
-                            {
-                                toCheckPct = pctA + (pctB - pctA) / 2;
-                                continue;
-                            }
-                            toCheckPct = fromCheckPct + pctSpan * m_EQSegmentLength / len;
-                            continue;
-
-                        }
-                        lenA = lenB = pctA = pctB = -1f;
-                        //m_PathSegments.Add(new Segment(m_PathSegments.Count, fromCheckPct, toCheckPct, len));
-                        totalLength += len;
-                        lengths.Add(len);
-                        path.Add(SplineValueAt(toCheckPct));
-
-                        if (done)
-                            break;
-                        var nextPctAdder = toCheckPct - fromCheckPct;
-                        fromCheckPct = toCheckPct;
-                        toCheckPct = fromCheckPct + nextPctAdder;
+                        toCheckPct = fromCheckPct + pctSpan * m_SegmentLength / len;
+                        continue;
                     }
-                    PathPoints = path.ToArray();
-
-                    //Update Segment pct
-                    var progressLen = 0f;
-                    m_PathSegments = new List<Segment>();
-                    for (int idx = 0; idx < PathPoints.Length - 1; ++idx)
+                    else if (len < min)
                     {
-                        var frmPct = progressLen/totalLength;
-                        progressLen += lengths[idx];
-                        var toPct = progressLen/totalLength;
-                        m_PathSegments.Add(new Segment(idx, frmPct, toPct, lengths[idx]));
-                    }
+                        lenA = len;
+                        pctA = toCheckPct;
+                        if (lenB != -1)
+                        {
+                            toCheckPct = pctA + (pctB - pctA) / 2;
+                            continue;
+                        }
+                        toCheckPct = fromCheckPct + pctSpan * m_SegmentLength / len;
+                        continue;
 
+                    }
+                    lenA = lenB = pctA = pctB = -1f;
+                    totalLength += len;
+                    lengths.Add(len);
+                    path.Add(SplineValueAt(toCheckPct));
+
+                    if (done)
+                        break;
+                    var nextPctAdder = toCheckPct - fromCheckPct;
+                    fromCheckPct = toCheckPct;
+                    toCheckPct = fromCheckPct + nextPctAdder;
+                }
+
+                if (path.Count < 2)
+                {
+                    Log.Warn("Segment Length too long.  (SegmentLength = '" + SegmentLength + "')");
+                    PathPoints = new T[] { m_FrameWaypoints[0], m_FrameWaypoints[m_FrameWaypoints.Count - 1] };
                 }
                 else
+                    PathPoints = path.ToArray();
+
+                //Update Segment pct
+                var progressLen = 0f;
+                m_PathSegments = new List<Segment>();
+                for (int idx = 0; idx < PathPoints.Length - 1; ++idx)
                 {
-
-                    if (m_SplineResolution <= 0)
-                    {
-                        Log.Warn("Received invalid resolution of " + m_SplineResolution + " - Setting to Default of " + Defaults.SplineResolution);
-                        m_SplineResolution = Defaults.SplineResolution;
-                    }
-
-                    var points = new List<T> { SplineValueAt(0) };
-                    var startPct = 0f;
-                    for (int idx = 1; idx < m_SplineResolution; idx++)
-                    {
-                        var endPct = (float)(idx) / (float)(m_SplineResolution - 1);
-                        points.Add(SplineValueAt(endPct));
-                        var len = DTypeInfo<T>.Length(points[points.Count - 2], points[points.Count - 1]);
-                        m_PathSegments.Add(new Segment(idx - 1, startPct, endPct, len));
-
-                        startPct = endPct;
-
-                    }
-                    PathPoints = points.ToArray();
+                    var frmPct = progressLen/totalLength;
+                    progressLen += lengths[idx];
+                    var toPct = progressLen/totalLength;
+                    m_PathSegments.Add(new Segment(idx, frmPct, toPct, lengths[idx]));
                 }
+
             }
 
             /// <summary>

@@ -548,64 +548,14 @@ public static class ioDriverFluency //TODO cleanup/split
         return _thisDriver;
     }
 
-    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
-    public static T SetSplineMode<T>(this T _spline, ioDriver.Path.SplineMode _mode)
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SegmentLength"/>
+    public static T SetSegmentLength<T>(this T _spline, float _length)
         where T : ioDriver.ISpline
     {
-        _spline.SplineMode = _mode;
+        _spline.SegmentLength = _length;
         return _spline;
     }
-
-    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.EQSegmentLength"/> 
-    /// <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
-    public static T SetModeEquidistant<T>(this T _spline, float _segmentLength)
-        where T : ioDriver.ISpline
-    {
-        _spline.EQSegmentLength = _segmentLength;
-        return _spline;
-    }
-
-    /// Fluency Method.  <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
-    public static T SetModeEquidistant<T>(this T _spline)
-        where T : ioDriver.ISpline
-    {
-        _spline.SplineMode = ioDriver.Path.SplineMode.Equidistant;
-        return _spline;
-    }
-
-    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SplineResolution"/> 
-    /// <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
-    public static T SetModeMathematical<T>(this T _spline, int _resolution)
-        where T : ioDriver.ISpline
-    {
-        _spline.SplineResolution = _resolution;
-        return _spline;
-    }
-
-    /// Fluency Method.  <seealso cref="ioDriver.Path.Spline{T}.SplineMode"/>
-    public static T SetModeMathematical<T>(this T _spline)
-        where T : ioDriver.ISpline
-    {
-        _spline.SplineMode = ioDriver.Path.SplineMode.Mathematical;
-        return _spline;
-    }
-
-    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.EQSegmentLength"/>
-    public static T SetEQSegmentLength<T>(this T _spline, float _length)
-        where T : ioDriver.ISpline
-    {
-        _spline.EQSegmentLength = _length;
-        return _spline;
-    }
-
-    /// Fluency Method.  See <see cref="ioDriver.Path.Spline{T}.SplineResolution"/>
-    public static T SetSplineResolution<T>(this T _spline, int _resolution)
-        where T : ioDriver.ISpline
-    {
-        _spline.SplineResolution = _resolution;
-        return _spline;
-    }
-
+    
     /// Fluency Method. See <see cref="ioDriver.Path.Spline{T}.DimsToSpline"/>
     public static T SetDimsToSpline<T>(this T _spline, params int[] _dimsToSpline)
         where T : ioDriver.ISpline

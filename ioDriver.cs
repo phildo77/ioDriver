@@ -1568,8 +1568,11 @@ public static partial class ioDriver
         /// <summary>Default ease type for easable driver types.</summary>
         public static EaseType easeType = EaseType.Linear;
 
-        /// <summary>Default spline equidistant segment length</summary>
-        public static float EQSegmentLength = 0.1f;
+        /// <summary>Default spline segment length</summary>
+        public static float SegmentLength = 0.1f;
+
+        /// <summary>Default spline segment length accuracy. <see cref="Path.Spline{T}.SegmentAccuracy"/></summary>
+        public static float SegmentAccuracy = 0.05f;
 
         /// Default managed event priority
         public static uint EventPriority = 10;
@@ -1597,9 +1600,6 @@ public static partial class ioDriver
         /// <summary>Default update behavior.</summary>
         public static bool ManualUpdate = false;
 
-        /// <summary>Default spline resolution.</summary>
-        public static int SplineResolution = 20;
-
         /// <summary>Default tag</summary>
         public static object Tag = "NO TAG";
 
@@ -1609,7 +1609,8 @@ public static partial class ioDriver
         /// Default control magnitude, as percent of incoming segment length
         public static float BezierMagPct = 0.33f;
 
-        public static float MaxUpdateFrequency = 60;
+        /// Default maximum update frequency.  <see cref="ioDriver.MaxUpdateFrequency"/>
+        public static float MaxUpdateFrequency = float.MaxValue;
 
         #endregion Fields
 
