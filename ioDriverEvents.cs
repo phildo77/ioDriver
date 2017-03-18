@@ -78,11 +78,11 @@ public static partial class ioDriver
 			public string ID { get; private set; }
 			public string Description { get; set; }
 
-			public Condition Condition;
-			public Handler<TTarget> Handler;
+            private Condition m_Condition;
+            private Handler<TTarget> m_Handler;
 			public bool Enabled { get; set; }
 			public int FireCount { get; set; }
-			public TTarget Target;
+			private TTarget m_Target;
 
 			public uint Priority
 			{
@@ -94,14 +94,14 @@ public static partial class ioDriver
 			{
 				var evt = new Managed<IEvent>
 				{
-					Condition = _condition,
-					Handler = _action,
+					m_Condition = _condition,
+					m_Handler = _action,
 					FireCount = _fireCount,
 					Description = _description,
 					ID = _id,
 					Enabled = true
 				};
-				evt.Target = evt;
+				evt.m_Target = evt;
 				return evt;
 			}
 
@@ -110,9 +110,9 @@ public static partial class ioDriver
 			{
 				var evt = new Managed<T>
 				{
-					Condition = _condition,
-					Handler = _action,
-					Target = _target,
+					m_Condition = _condition,
+					m_Handler = _action,
+					m_Target = _target,
 					FireCount = _fireCount,
 					Description = _description,
 					ID = _id,
@@ -131,12 +131,12 @@ public static partial class ioDriver
 			void IEvent.Fire()
 			{
 				FireCount--;
-				this.Handler(Target);
+				this.m_Handler(m_Target);
 			}
 
 			bool IEvent.TestCond()
 			{
-				return Condition();
+				return m_Condition();
 			}
 
 			/// Fluency method.  See <see cref="Priority"/>
@@ -160,7 +160,7 @@ public static partial class ioDriver
 				return this;
 			}
 
-			object IEvent.Target { get { return Target; } }
+			object IEvent.Target { get { return m_Target; } }
 		}
 
 		private static class Manager
@@ -211,14 +211,6 @@ public static partial class ioDriver
 			    var id = _id ?? GenID();
 				var mEvt = Managed<IEvent>.Create(_cond, _handler, _fireCount, _desc, id);
 
-#if ioTRIAL
-			    if (++m_TrialEventCount > MAX_EVENT_COUNT)
-                {
-                    Log.Warn("Maxium " + MAX_EVENT_COUNT + " events in trial version.  This event will not be managed.", true);
-                    return mEvt;
-			    }
-#endif
-
 				Manage(mEvt, _priority);
 				return mEvt;
 			}
@@ -229,22 +221,17 @@ public static partial class ioDriver
                 var id = _id ?? GenID();
 				var mEvt = Managed<T>.Create(_cond, _handler, _target, _fireCount, _desc, id);
 
-#if ioTRIAL
-                if (++m_TrialEventCount > MAX_EVENT_COUNT)
-                {
-                    Log.Warn("Maxium " + MAX_EVENT_COUNT + " events in trial version.  This event will not be managed.", true);
-                    return mEvt;
-                }
-#endif
-
 				Manage(mEvt, _priority);
 				return mEvt;
 			}
 
 			private static void Manage(IEvent _event, uint _priority)
 			{
-				if (m_Events.ContainsKey(_event.ID))
-					throw new ArgumentException("Event ID: '" + _event.ID + "' already exists.  IDs must be unique.", "_id");
+			    if (m_Events.ContainsKey(_event.ID))
+			    {
+			        Log.Err("Event ID: '" + _event.ID + "' already exists.  IDs must be unique.  Ignoring Event.");
+			        return;
+			    }
 				Log.Info("Adding event for target " + _event.Target + " with event '" + _event.Description + "' - count: " + _event.FireCount +
 					" - Priority: " + _priority + " - ID: '" + _event.ID + "'", Debug.ReportEvents);
 
@@ -287,7 +274,7 @@ public static partial class ioDriver
 
 			public static void Dispose(object _target)
 			{
-				if (!m_EventsByObject.ContainsKey(_target)) return;
+			    if (!m_EventsByObject.ContainsKey(_target)) return;
 				
 				var evtIDs = new List<string>(m_EventsByObject[_target]);
 				foreach (var id in evtIDs)
@@ -369,6 +356,17 @@ public static partial class ioDriver
 		{
 			return Manager.Add(_condition, _evt => _eventAction(), 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
 		}
+
+	    public static void Remove(string _id)
+	    {
+	        var evt = Manager.GetEvent(_id);
+	        if (evt == null)
+	        {
+	            Log.Warn("ioDriver.Event.Remove : Event ID '" + _id + "' not found. Ignoring.");
+	            return;
+	        }
+	        Manager.Remove(_id);
+	    }
 		
 		// Dispose this object (removes all events)
 		private static void Dispose(object _target)

@@ -278,16 +278,19 @@ public static partial class ioDriver
 	/// Fluency interface.  See <see cref="DMapped{TTar,TDri}"/>
 	public interface IDMapped
 	{
-		/// See <see cref="DMapped{TTar,TDri}.Ease"/>
-		void Ease(EaseType _easeType);
-		/// See <see cref="DMapped{TTar,TDri}.EaseCustom"/>
-		void EaseCustom(object _customEaseTypeKey);
+        /// See <see cref="DMapped{TTar,TDri}.Ease"/>
+	    void Ease(EaseType _easeType);
+	    /// See <see cref="DMapped{TTar,TDri}.EaseCustom"/>
+	    void EaseCustom(object _customEaseTypeKey);
 		/// See <see cref="DMapped{TTar,TDri}.ClampDrive"/>
 		void ClampDrive(float _clampMinPercent, float _clampMaxPercent);
 		/// See <see cref="DMapped{TTar,TDri}.easeType"/>
 		EaseType easeType { get; }
 		/// See <see cref="DMapped{TTar,TDri}.EaseTypeCustomKey"/>
 		object EaseTypeCustomKey { get; }
+        /// See <see cref="DMapped{TTar,TDri}.DebugEasedPct"/>
+        float DebugEasedPct { get; }
+
 		/// See <see cref="DMapped{TTar,TDri}.ClampDriveMaxPct"/>
 		float ClampDriveMaxPct { get; set; }
 		/// See <see cref="DMapped{TTar,TDri}.ClampDriveMinPct"/>
@@ -296,10 +299,15 @@ public static partial class ioDriver
 		float DebugDrivePct { get; }
 		/// See <see cref="DMapped{TTar,TDri}.DebugClampedDrivePct"/>
 		float DebugClampedDrivePct { get; }
-		/// See <see cref="DMapped{TTar,TDri}.DebugEasedPct"/>
-		float DebugEasedPct { get; }
 
 	}
+
+    /* TODO Implement?
+    public interface IEaseable
+    {
+        
+    }
+     * */
 
 	/// <summary>
 	/// Drive target at a specified rate. 

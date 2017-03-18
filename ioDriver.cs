@@ -1052,7 +1052,10 @@ public static partial class ioDriver
             set
             {
                 if (Started)
-                    throw new Exception("ioDriver.DBase.TargetInfo - Can't change target information after the driver has already been started!");
+                {
+                    Log.Warn("ioDriver.DBase.TargetInfo - Can't change target information after the driver has already been started!");
+                    return;
+                }
                 m_TargetInfo = value;
             }
         }
@@ -1095,8 +1098,10 @@ public static partial class ioDriver
             where T : DBase
         {
             if (_seconds < 0)
-                throw new ArgumentException("ioDriver:DBase:AddEventTimed - _seconds cannot be less than zero.",
-                    "_seconds");
+            {
+                Log.Err("ioDriver:DBase:AddEventTimed - _seconds cannot be less than zero.  No event added.");
+                return null;
+            }
 
             var evt = Event.Add(this as T, () => ElapsedTime >= _seconds, _action, _id);
             evt.Description = "Timed at " + _seconds + " seconds on " + Name;
@@ -1518,10 +1523,10 @@ public static partial class ioDriver
         #region Fields
 
         /// Report error messages
-        public static bool ErrorMessages = true;
+        public static bool ReportErrorMessages = true;
 
         /// Report informational messages
-        public static bool InfoMessages = false;
+        public static bool ReportInfoMessages = false;
 
         /// Report driver conflicts (override)
         public static bool ReportConflict = false;
@@ -1530,7 +1535,7 @@ public static partial class ioDriver
         public static bool ReportEvents = false;
 
         /// Report warning messages
-        public static bool WarnMessages = true;
+        public static bool ReportWarnMessages = true;
 
         #endregion Fields
 
@@ -1539,9 +1544,9 @@ public static partial class ioDriver
         /// Report all ioDriver messages and debug info
         public static void SetFullReporting()
         {
-            ErrorMessages = true;
-            WarnMessages = true;
-            InfoMessages = true;
+            ReportErrorMessages = true;
+            ReportWarnMessages = true;
+            ReportInfoMessages = true;
             ReportConflict = true;
             ReportEvents = true;
         }
@@ -1556,25 +1561,25 @@ public static partial class ioDriver
     {
         #region Fields
 
-        /// <summary>Default behavior when a conflict is detected.</summary>
+        /// <summary>Default behavior when a conflict is detected. <seealso cref="ConflictBehavior"/><seealso cref="DBase.conflictBehavior"/></summary>
         public static ConflictBehavior conflictBehavior = ConflictBehavior.Replace;
 
-        /// <summary>Default delay in seconds for all driver types. </summary>
+        /// <summary>Default delay in seconds for all driver types. <seealso cref="DBase.Delay"/></summary>
         public static float Delay = 0f;
 
-        /// <summary>Default duration for all drivers.</summary>
+        /// <summary>Default duration for all drivers.<seealso cref="DBase.Duration"/></summary>
         public static float Duration = float.PositiveInfinity;
 
-        /// <summary>Default ease type for easable driver types.</summary>
+        /// <summary>Default ease type for easable driver types. <seealso cref="EaseType"/></summary>
         public static EaseType easeType = EaseType.Linear;
 
-        /// <summary>Default spline segment length</summary>
+        /// <summary>Default spline segment length. <seealso cref="Path.Spline{T}.SegmentLength"/></summary>
         public static float SegmentLength = 0.1f;
 
-        /// <summary>Default spline segment length accuracy. <see cref="Path.Spline{T}.SegmentAccuracy"/></summary>
+        /// <summary>Default spline segment length accuracy. <seealso cref="Path.Spline{T}.SegmentAccuracy"/></summary>
         public static float SegmentAccuracy = 0.05f;
 
-        /// Default managed event priority
+        /// Default managed event priority. <seealso cref="IEvent.Priority"/><seealso cref="IEvent.SetPriority"/>
         public static uint EventPriority = 10;
 
         private static float m_Timescale = 1;
@@ -1597,19 +1602,16 @@ public static partial class ioDriver
         
         }
 
-        /// <summary>Default update behavior.</summary>
-        public static bool ManualUpdate = false;
-
-        /// <summary>Default tag</summary>
+        /// <summary>Default tag.  <seealso cref="DBase.Tag"/></summary>
         public static object Tag = "NO TAG";
 
-        /// <summary>Default timescale behavior.</summary>
+        /// <summary>Default timescale behavior. <seealso cref="DBase.UseTimescaleLocal"/></summary>
         public static bool UseTimescaleLocal = false;
 
-        /// Default control magnitude, as percent of incoming segment length
+        /// Default control magnitude, as percent of incoming segment length.  <seealso cref="Path.Bezier{T}.Control"/>
         public static float BezierMagPct = 0.33f;
 
-        /// Default maximum update frequency.  <see cref="ioDriver.MaxUpdateFrequency"/>
+        /// Default maximum update frequency.  <seealso cref="ioDriver.MaxUpdateFrequency"/>
         public static float MaxUpdateFrequency = float.MaxValue;
 
         #endregion Fields
@@ -1647,7 +1649,10 @@ public static partial class ioDriver
             TargetInfo = new TargetInfo(TarAction.Method, null);
             Driver = _driver;
             if (!DTypeInfo<TTar>.IsValid)
-                throw new Exception("ioDriver: I haven't been taught about type " + typeof(TTar));
+            {
+                Log.Err("ioDriver: I haven't been taught about type " + typeof(TTar));
+                Destroy();
+            }
 
             DriveInjector = _drive => _drive;
             TargetInjector = _target => _target;
@@ -2312,7 +2317,7 @@ public static partial class ioDriver
 
         public static void Err(string _msg, bool? _override = null)
         {
-            var log = Debug.ErrorMessages;
+            var log = Debug.ReportErrorMessages;
             if (_override != null) log = _override.Value;
             if (!log) return;
             var msg = LOG_ID + " : " + _msg;
@@ -2325,7 +2330,7 @@ public static partial class ioDriver
 
         public static void Info(string _msg, bool? _override = null)
         {
-            var log = Debug.InfoMessages;
+            var log = Debug.ReportInfoMessages;
             if (_override != null) log = _override.Value;
             if (!log) return;
             var msg = LOG_ID + " : " + _msg;
@@ -2338,7 +2343,7 @@ public static partial class ioDriver
 
         public static void Warn(string _msg, bool? _override = null)
         {
-            var log = Debug.WarnMessages;
+            var log = Debug.ReportWarnMessages;
             if (_override != null) log = _override.Value;
             if (!log) return;
             var msg = LOG_ID + " : " + _msg;

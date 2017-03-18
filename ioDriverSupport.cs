@@ -56,7 +56,7 @@ public static partial class ioDriver
                 AddChainTo(idx, _chain);
                 return;
             }
-            throw new Exception("ioDriver:Chain:AddChainTo - Driver does not exist in chain.");
+            Log.Err("ioDriver:Chain:AddChainTo - Driver does not exist in chain!  Driver '" + _driver.Name + "' requested.");
         }
 
         /// Start this chain

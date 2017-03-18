@@ -640,7 +640,10 @@ public static partial class ioDriver
             public Segment GetFrameSegmentAt(float _pct)
             {
                 if (_pct < 0f || _pct > 1f)
-                    throw new ArgumentOutOfRangeException("_pct must be between 0 and 1.");
+                {
+                    Log.Err("_pct must be between 0 and 1.  Returning null.");
+                    return null;
+                }
                 if (_pct == 0) return FrameSegments[0];
                 if (_pct == 1) return FrameSegments[FrameSegments.Length - 1];
 
@@ -730,9 +733,6 @@ public static partial class ioDriver
 
             private static T LerpPath(float _pct, List<T> _points, List<Segment> _segments, float _pathLen, bool _closed)
             {
-                if (_pct < 0f || _pct > 1f)
-                    throw new ArgumentOutOfRangeException("_pct",
-                        "LerpPath : must be between 0 and 1, inclusive.");
                 if (_pct == 0f) return _points[0];
                 if (_pct == 1f) return _closed ? _points[0] : _points[_points.Count - 1];
 
