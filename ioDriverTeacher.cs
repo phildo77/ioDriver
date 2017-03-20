@@ -13,7 +13,9 @@ public static partial class ioDriver
     {
         private static bool m_InitDone = false;
 
-        private static void Init()
+        static Teacher() { ioDriver.Init(); }
+
+        internal static void Init()
         {
             if (m_InitDone) return;
 

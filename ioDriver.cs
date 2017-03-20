@@ -4,6 +4,9 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+#if ioUNITY
+    using ioDriverUnity;
+#endif 
 
 
 /// <summary>
@@ -25,13 +28,11 @@ public static partial class ioDriver
     private static Dictionary<object, Func<float, float>> m_CustomEaseFuncs = new Dictionary<object, Func<float, float>>();
     private static bool m_DebugEnableGlobal = false;
 
-    private static Type m_UnityEngine;
-    private static bool? m_UnityPresent = null;
     private static bool m_UnityMgrPresent = false;
 
     private static float m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
     private static float m_TimescaleGlobal = Defaults.Timescale;
-
+    
     #endregion Fields
 
 
@@ -424,7 +425,7 @@ public static partial class ioDriver
             m_MaxUpdateFrequency = val;
         }
     }
-
+    
     #endregion Properties
 
     #region Methods
@@ -496,52 +497,26 @@ public static partial class ioDriver
     /// Initialize ioDriver.  Called in static constructor.
     public static void Init()
     {
-        if (m_UnityPresent == null)
-        {
-            m_UnityEngine = Type.GetType("UnityEngine.Transform, UnityEngine");
-            m_UnityPresent = m_UnityEngine != null;
-            if (m_UnityPresent.Value)
-            {
-                var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
-                Log.Err("Um is " + um);
-                var umInstFld = um.GetField("m_Instance", BindingFlags.NonPublic | BindingFlags.Static);
-                Log.Err("Um Inst fld is " + umInstFld);
-                m_UnityMgrPresent = (umInstFld.GetValue(um) != null);
 
-                InitDone = false;
-            }
-        }
-
-        //Do Unity Init if present
-        if (m_UnityPresent.Value && !m_UnityMgrPresent)
-        {
-            var um = GetTypeEx("ioDriverUnity.ioDriverUnityManager");
-            if (um != null)
-                um.GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic).Invoke(um, null);
-
-
-        }
 
 
         if (InitDone) return;
         InitDone = true;
 
-
-
         //Initialize Teacher
-        typeof(Teacher).GetMethod("Init", BindingFlags.Static | BindingFlags.NonPublic)
-            .Invoke(typeof(Teacher), null);
+        Teacher.Init();
 
         //Initialize Manager
-        var mgr =
-            typeof(DBase).GetNestedType("Manager", BindingFlags.NonPublic);
-        mgr.GetMethod("Init", BindingFlags.NonPublic | BindingFlags.Static).Invoke(mgr, null);
+        DBase.InitManager();
 
         //Initialize Events
-        typeof(Event).GetMethod("Init", BindingFlags.NonPublic | BindingFlags.Static)
-            .Invoke(typeof(Event), null);
+        Event.Init();
 
 
+#if ioUNITY
+        //Initialize Unity Manager
+        ioDriverUnityManager.Init();
+#endif
         Log.Info("ioDriver Initialized");
     }
 
@@ -1233,6 +1208,11 @@ public static partial class ioDriver
             Update();
         }
 
+        internal static void InitManager()
+        {
+            Manager.Init();
+        }
+
         private string AutoName()
         {
             return NiceType + "-" + m_CurAutoNameNum++;
@@ -1284,7 +1264,7 @@ public static partial class ioDriver
             private static float m_LastUpdateTimestamp;
             private static Queue<DBase> m_StartQueue;
 
-            private static void Init()
+            public static void Init()
             {
                 m_StartQueue = new Queue<DBase>();
 

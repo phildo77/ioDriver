@@ -36,83 +36,22 @@
     <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
     <RegisterForComInterop>false</RegisterForComInterop>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'UnityDebug|AnyCPU' ">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseUnity|AnyCPU'">
+    <OutputPath>bin\ReleaseUnity\</OutputPath>
+    <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <DefineConstants>ioUNITY</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugUnity|AnyCPU'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\Unity\</OutputPath>
+    <OutputPath>bin\DebugUnity\</OutputPath>
     <DefineConstants>TRACE;DEBUG;ioUNITY</DefineConstants>
     <DocumentationFile>bin\Debug\ioDriver.xml</DocumentationFile>
     <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnityRelease|AnyCPU'">
-    <OutputPath>bin\UnityRelease\</OutputPath>
-    <DefineConstants>TRACE;ioUNITY</DefineConstants>
-    <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'DebugPath|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\DebugPath\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;ioPATH</DefineConstants>
-    <DocumentationFile>bin\Debug\ioDriver.xml</DocumentationFile>
-    <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnityDebugPath|AnyCPU'">
-    <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\UnityDebugPath\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;ioUNITY;ioPATH</DefineConstants>
-    <DocumentationFile>bin\Debug\ioDriver.xml</DocumentationFile>
-    <DebugType>full</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleasePath|AnyCPU'">
-    <OutputPath>bin\ReleasePath\</OutputPath>
-    <DefineConstants>TRACE;ioPATH</DefineConstants>
-    <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnityReleasePath|AnyCPU'">
-    <OutputPath>bin\UnityReleasePath\</OutputPath>
-    <DefineConstants>TRACE;ioUNITY;ioPATH</DefineConstants>
-    <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'UnityReleasePathTrial|AnyCPU'">
-    <OutputPath>bin\UnityReleasePathTrial\</OutputPath>
-    <DefineConstants>ioUNITY;ioPATH;ioTRIAL</DefineConstants>
-    <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <PlatformTarget>AnyCPU</PlatformTarget>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleasePathTrial|AnyCPU'">
-    <OutputPath>bin\ReleasePathTrial\</OutputPath>
-    <DefineConstants>ioPATH;ioTRIAL</DefineConstants>
-    <DocumentationFile>bin\Release\ioDriver.xml</DocumentationFile>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -120,10 +59,17 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="UnityEngine" Condition="'$(Configuration)'=='ReleaseUnity'">
+      <HintPath>C:\Program Files\Unity\Editor\Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine" Condition="'$(Configuration)'=='DebugUnity'">
+      <HintPath>C:\Program Files\Unity\Editor\Data\Managed\UnityEngine.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ioDriverEvents.cs" />
     <Compile Include="ioDriverSupport.cs" />
+    <Compile Include="ioDriverUnityManager.cs" />
     <Compile Include="ioPath.cs" />
     <Compile Include="ioDriver.cs" />
     <Compile Include="ioDriverCreate.cs" />
@@ -150,7 +96,4 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <PropertyGroup>
-    <PostBuildEvent>if /I "$(ConfigurationName)" == "UnityReleasePathFoo" Eazfuscator.NET.exe "$(TargetPath)" --msbuild-project-path "$(ProjectPath)" --msbuild-project-configuration "$(ConfigurationName)" --msbuild-project-platform "$(PlatformName)" --msbuild-solution-path "$(SolutionPath)" -n --newline-flush -v 5.4</PostBuildEvent>
-  </PropertyGroup>
 </Project>

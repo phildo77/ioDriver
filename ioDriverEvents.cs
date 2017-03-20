@@ -86,8 +86,8 @@ public static partial class ioDriver
 
 			public uint Priority
 			{
-				get { return Manager.GetPriority(ID); }
-				set { Manager.SetPriority(ID, value); }
+				get { return EventMgr.GetPriority(ID); }
+				set { EventMgr.SetPriority(ID, value); }
 			}
 
 			public static IEvent Create(Condition _condition, Handler<IEvent> _action, int _fireCount, string _description, string _id)
@@ -124,7 +124,7 @@ public static partial class ioDriver
 			/// Remove this managed event and dispose it.
 			public void Remove()
 			{
-				Manager.Remove(ID);
+				EventMgr.Remove(ID);
 			}
 
 			/// Fire this event's handler.  Decreases fire count by 1.
@@ -163,7 +163,7 @@ public static partial class ioDriver
 			object IEvent.Target { get { return m_Target; } }
 		}
 
-		private static class Manager
+		private static class EventMgr
 		{
 			private static Dictionary<string, IEvent> m_Events = new Dictionary<string, IEvent>();
 			private static Dictionary<IEvent, string> m_EventIDs = new Dictionary<IEvent, string>(); 
@@ -330,7 +330,7 @@ public static partial class ioDriver
 		/// <returns>Created event</returns>
 		public static IEvent Add<T>(T _target, Event.Condition _condition, Event.Handler<T> _eventAction, string _id = null)
 		{
-			return Manager.Add(_target, _condition, _eventAction, 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
+			return EventMgr.Add(_target, _condition, _eventAction, 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
 		}
 
 		/// <summary>
@@ -342,7 +342,7 @@ public static partial class ioDriver
 		/// <returns>Created event</returns>
 		public static IEvent Add(Event.Condition _condition, Event.Handler<IEvent> _eventAction, string _id = null)
 		{
-			return Manager.Add(_condition, _eventAction, 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
+			return EventMgr.Add(_condition, _eventAction, 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
 		}
 
 		/// <summary>
@@ -354,24 +354,24 @@ public static partial class ioDriver
 		/// <returns>Created event</returns>
 		public static IEvent Add(Event.Condition _condition, Action _eventAction, string _id = null)
 		{
-			return Manager.Add(_condition, _evt => _eventAction(), 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
+			return EventMgr.Add(_condition, _evt => _eventAction(), 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
 		}
 
 	    public static void Remove(string _id)
 	    {
-	        var evt = Manager.GetEvent(_id);
+	        var evt = EventMgr.GetEvent(_id);
 	        if (evt == null)
 	        {
 	            Log.Warn("ioDriver.Event.Remove : Event ID '" + _id + "' not found. Ignoring.");
 	            return;
 	        }
-	        Manager.Remove(_id);
+	        EventMgr.Remove(_id);
 	    }
 		
 		// Dispose this object (removes all events)
 		private static void Dispose(object _target)
 		{
-			Manager.Dispose(_target);
+			EventMgr.Dispose(_target);
 		}
 
 		/// <summary>
@@ -381,7 +381,7 @@ public static partial class ioDriver
 		/// <returns>Managed event with ID (null if not found)</returns>
 		public static IEvent GetEvent(string _id)
 		{
-			return Manager.GetEvent(_id);
+			return EventMgr.GetEvent(_id);
 		}
 
 
@@ -391,7 +391,7 @@ public static partial class ioDriver
 		/// <returns>Dictionary of all managed events keyed by ID.</returns>
 		public static Dictionary<string, IEvent> GetAllManagedEvents()
 		{
-			return new Dictionary<string, IEvent>(Manager.GetAllEvents());
+			return new Dictionary<string, IEvent>(EventMgr.GetAllEvents());
 		}
 
 		/// <summary>
@@ -401,12 +401,12 @@ public static partial class ioDriver
 		/// <returns>HashSet of managed event IDs found with target object</returns>
 		public static HashSet<string> GetEventIDsOn(object _target)
 		{
-			return Manager.GetEventIDsOn(_target);
+			return EventMgr.GetEventIDsOn(_target);
 		}
 
-		private static void Init()
+		internal static void Init()
 		{
-			Manager.Init();
+			EventMgr.Init();
 		}
 	}
 
