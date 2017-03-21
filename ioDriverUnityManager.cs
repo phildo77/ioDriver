@@ -1,11 +1,12 @@
 ﻿#if ioUNITY
+using System;
+using System.Collections.Generic;
+
+using UnityEngine;
 
 namespace ioDriverUnity
 {
-    using System;
-    using System.Collections.Generic;
-
-    using UnityEngine;
+    
 
     /// Unity Specific Extensions
     public static class ioDriverUnityExt
@@ -209,6 +210,17 @@ namespace ioDriverUnity
             return ioDriver.Tween(() => _thisGo.transform.lossyScale, _thisGo.transform.localScale, _to, _duration);
         }
 
+        public static ioDriver.DTweenPath<Vector3> ioTweenPath(this GameObject _go, ioDriver.Path.Base<Vector3> _path,  float _duration, string _name = null)
+        {
+            return ioDriver.Tween(() => _go.transform.position, _path, _duration, _name);
+        }
+
+        public static ioDriver.DTweenPath<Vector3> Tween(this ioDriver.Path.Base<Vector3> _path, GameObject _go,
+            float _duration, string _name = null)
+        {
+            return ioDriver.Tween(() => _go.transform.position, _path, _duration, _name);
+        }
+        
         private static Action<Vector3> ActionRotate(GameObject _go)
         {
             return angles => _go.transform.eulerAngles = NormAngles(angles);
@@ -281,7 +293,11 @@ namespace ioDriverUnity
         {
             get
             {
-                if (!UnityEngine.Application.isPlaying) return null;
+                if (!UnityEngine.Application.isPlaying)
+                {
+                    ioDriver.Reset();
+                    return null;
+                }
                 if (applicationIsQuitting)
                 {
                     return null;
@@ -322,6 +338,12 @@ namespace ioDriverUnity
             ioDriver.TimescaleGlobal = UnityEngine.Time.timeScale;
             TeachUnity();
             Enabled = true;
+        }
+
+        void OnApplicationQuit()
+        {
+            ioDriver.Reset();
+            DestroyImmediate(this.gameObject);
         }
 
         private static float InvLerpColor(Color _from, Color _to, Color _val)
@@ -540,6 +562,7 @@ namespace ioDriverUnity
         {
             applicationIsQuitting = true;
             ioDriver.DestroyAll();
+            m_Instance = null;
         }
 
         void Update()
@@ -613,6 +636,26 @@ namespace ioDriverUnity
 
         #endregion Methods
     }
+
+    
 }
 
+public static partial class ioDriver
+{
+    public static DTweenPath<Vector3> TweenWorld(GameObject _go, Path.Base<Vector3> _path, float _duration, string _name = null)
+    {
+        return Tween(() => _go.transform.position, _path, _duration, _name);
+    }
+
+    public static DTweenPath<Vector3> TweenWorld(Transform _xfrm, Path.Base<Vector3> _path, float _duration,
+        string _name = null)
+    {
+        return Tween(() => _xfrm.position, _path, _duration, _name);
+    }
+
+    internal static void Reset()
+    {
+        InitDone = false;
+    }
+}
 #endif

@@ -417,8 +417,10 @@ public static partial class ioDriver
                 Log.Err("Maximum Update Frequency cannot be equal to or less than 0.  Setting default of '" +
                         Defaults.MaxUpdateFrequency + "'");
                 m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
+                return;
             }
-            else if (val == Double.PositiveInfinity)
+            
+            if (val == Double.PositiveInfinity)
             {
                 val = float.MaxValue;
             }
