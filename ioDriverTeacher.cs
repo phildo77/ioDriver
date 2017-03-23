@@ -15,94 +15,101 @@ public static partial class ioDriver
 
         static Teacher() { ioDriver.Init(); }
 
+        private static Dictionary<Type, HashSet<TeachType>> m_TaughtTypes;
+
+        public static Dictionary<Type, HashSet<TeachType>> TaughtTypes
+        {
+            get
+            {
+                return m_TaughtTypes == null ? new Dictionary<Type, HashSet<TeachType>>() : 
+                    new Dictionary<Type, HashSet<TeachType>>(m_TaughtTypes);
+            }
+        } 
+
         internal static void Init()
         {
             if (m_InitDone) return;
 
-            DTypeInfo<byte>.ZeroFunc = () => 0;
-            DTypeInfo<byte>.Add = (_a, _b) => (byte)(_a + _b);
-            DTypeInfo<byte>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<byte>.Lerp = (_from, _to, _pct) => (byte)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<byte>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            m_TaughtTypes = new Dictionary<Type, HashSet<TeachType>>();
+
+            Teach((byte)0,
+                (_a, _b) => (byte)(_a + _b),
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (byte)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<byte>(1, _val => (byte)_val[0], _val => _val);
 
-
-            DTypeInfo<sbyte>.ZeroFunc = () => 0;
-            DTypeInfo<sbyte>.Add = (_a, _b) => (sbyte)(_a + _b);
-            DTypeInfo<sbyte>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<sbyte>.Lerp =
-                (_from, _to, _pct) => (sbyte)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<sbyte>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((sbyte)0,
+                (_a, _b) => (sbyte)(_a + _b),
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (sbyte)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<byte>(1, _val => (byte)_val[0], _val => _val);
 
-            DTypeInfo<short>.ZeroFunc = () => 0;
-            DTypeInfo<short>.Add = (_a, _b) => (short)(_a + _b);
-            DTypeInfo<short>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<short>.Lerp =
-                (_from, _to, _pct) => (short)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<short>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((short)0,
+                (_a, _b) => (short)(_a + _b),
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (short)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<short>(1, _val => (short)_val[0], _val => _val);
 
-
-            DTypeInfo<ushort>.ZeroFunc = () => 0;
-            DTypeInfo<ushort>.Add = (_a, _b) => (ushort)(_a + _b);
-            DTypeInfo<ushort>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<ushort>.Lerp =
-                (_from, _to, _pct) => (ushort)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<ushort>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((ushort)0,
+                (_a, _b) => (ushort)(_a + _b),
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (ushort)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<ushort>(1, _val => (ushort)_val[0], _val => _val);
 
-            DTypeInfo<int>.ZeroFunc = () => 0;
-            DTypeInfo<int>.Add = (_a, _b) => _a + _b;
-            DTypeInfo<int>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<int>.Lerp = (_from, _to, _pct) => (int)(_from + System.Math.Round((_to - _from) * _pct));
-            DTypeInfo<int>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((int)0,
+                (_a, _b) => _a + _b,
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (int)(_from + System.Math.Round((_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<int>(1, _val => (int)_val[0], _val => _val);
 
-            DTypeInfo<uint>.ZeroFunc = () => 0;
-            DTypeInfo<uint>.Add = (_a, _b) => (uint)(_a + _b);
-            DTypeInfo<uint>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<uint>.Lerp = (_from, _to, _pct) => (uint)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<uint>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((uint)0,
+                (_a, _b) => (uint)(_a + _b),
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (uint)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<uint>(1, _val => (uint)_val[0], _val => _val);
 
-            DTypeInfo<long>.ZeroFunc = () => 0;
-            DTypeInfo<long>.Add = (_a, _b) => (long)(_a + _b);
-            DTypeInfo<long>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<long>.Lerp = (_from, _to, _pct) => (long)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<long>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((long)0,
+                (_a, _b) => (long)(_a + _b),
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (long)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<long>(1, _val => (long)_val[0], _val => _val);
 
-            DTypeInfo<ulong>.ZeroFunc = () => 0;
-            DTypeInfo<ulong>.Add = (_a, _b) => (ulong)(_a + _b);
-            DTypeInfo<ulong>.Length = (_a, _b) => (float)Math.Abs((double)(_b - _a));
-            DTypeInfo<ulong>.Lerp =
-                (_from, _to, _pct) => (ulong)(_from + System.Math.Round((float)(_to - _from) * _pct));
-            DTypeInfo<ulong>.ILerp = (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from);
+            Teach((ulong)0,
+                (_a, _b) => (ulong)(_a + _b),
+                (_a, _b) => (float)Math.Abs((double)(_b - _a)),
+                (_from, _to, _pct) => (ulong)(_from + System.Math.Round((float)(_to - _from) * _pct)),
+                (_from, _to, _val) => (float)(_val - _from) / (float)(_to - _from));
             TeachCoord<ulong>(1, _val => (ulong)_val[0], _val => _val);
 
-            DTypeInfo<float>.ZeroFunc = () => 0;
-            DTypeInfo<float>.Add = (_a, _b) => _a + _b;
-            DTypeInfo<float>.Length = (_a, _b) => Math.Abs(_b - _a);
-            DTypeInfo<float>.Lerp = (_from, _to, _pct) => (_from + (_to - _from) * _pct);
-            DTypeInfo<float>.ILerp = (_from, _to, _val) => (_val - _from) / (_to - _from);
+            Teach((float)0,
+                (_a, _b) => _a + _b,
+                (_a, _b) => Math.Abs(_b - _a),
+                (_from, _to, _pct) => (_from + (_to - _from) * _pct),
+                (_from, _to, _val) => (_val - _from) / (_to - _from));
             TeachCoord<float>(1, _val => _val[0], _val => _val);
 
-            DTypeInfo<double>.ZeroFunc = () => 0d;
-            DTypeInfo<double>.Add = (_a, _b) => (double)(_a + _b);
-            DTypeInfo<double>.Length = (_a, _b) => Math.Abs((float)(_b - _a));
-            DTypeInfo<double>.Lerp = (_from, _to, _pct) => (_from + (_to - _from) * _pct);
-            DTypeInfo<double>.ILerp = (_from, _to, _val) => (float)((_val - _from) / (_to - _from));
+            Teach((double)0,
+                (_a, _b) => (double)(_a + _b),
+                (_a, _b) => Math.Abs((float)(_b - _a)),
+                (_from, _to, _pct) => (_from + (_to - _from) * _pct),
+                (_from, _to, _val) => (float)((_val - _from) / (_to - _from)));
             TeachCoord<double>(1, _val => (double)_val[0], _val => (float)_val);
 
 
-            DTypeInfo<decimal>.ZeroFunc = () => 0;
-            DTypeInfo<decimal>.Add = (_a, _b) => _a + _b;
-            DTypeInfo<decimal>.Length = (_a, _b) => Math.Abs((float)(_b - _a));
-            DTypeInfo<decimal>.Lerp = (_from, _to, _pct) => (_from + (_to - _from) * (decimal)_pct);
-            DTypeInfo<decimal>.ILerp = (_from, _to, _val) => (float)((_val - _from) / (_to - _from));
+            Teach((decimal)0,
+                (_a, _b) => _a + _b,
+                (_a, _b) => Math.Abs((float)(_b - _a)),
+                (_from, _to, _pct) => (_from + (_to - _from) * (decimal)_pct),
+                (_from, _to, _val) => (float)((_val - _from) / (_to - _from)));
+            
             TeachCoord<decimal>(1, _val => (decimal)_val[0], _val => (float)_val);
-
 
             m_InitDone = true;
         }
@@ -230,6 +237,17 @@ public static partial class ioDriver
             DTypeInfo<T>.Length = _length;
             DTypeInfo<T>.Lerp = _lerp;
             DTypeInfo<T>.ILerp = _iLerp;
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof (T)))
+                m_TaughtTypes.Add(typeof (T), new HashSet<TeachType>());
+
+            m_TaughtTypes[typeof(T)].Add(TeachType.Zero);
+            m_TaughtTypes[typeof(T)].Add(TeachType.Add);
+            m_TaughtTypes[typeof(T)].Add(TeachType.Length);
+            m_TaughtTypes[typeof(T)].Add(TeachType.Lerp);
+            m_TaughtTypes[typeof(T)].Add(TeachType.ILerp);
         }
 
         /// <summary>
@@ -241,6 +259,12 @@ public static partial class ioDriver
         {
             DTypeInfo<T>.ZeroFunc = () => _zero;
             DTypeInfo<T>.Zero = _zero;
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof(T)))
+                m_TaughtTypes.Add(typeof(T), new HashSet<TeachType>());
+            m_TaughtTypes[typeof(T)].Add(TeachType.Zero);
         }
 
         /// <summary>
@@ -248,26 +272,64 @@ public static partial class ioDriver
         /// </summary>
         /// <typeparam name="T">Object Type</typeparam>
         /// <param name="_addFunc">Function containing addition operation for type T.</param>
-        public static void TeachAdd<T>(Teacher.FuncAdd<T> _addFunc) { DTypeInfo<T>.Add = _addFunc; }
+        public static void TeachAdd<T>(Teacher.FuncAdd<T> _addFunc)
+        {
+            DTypeInfo<T>.Add = _addFunc;
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof(T)))
+                m_TaughtTypes.Add(typeof(T), new HashSet<TeachType>());
+            m_TaughtTypes[typeof(T)].Add(TeachType.Add);
+        }
 
         /// <summary>
         /// Teach ioDriver how to calculate relative length between two values of type T.
         /// </summary>
         /// <typeparam name="T">Object Type</typeparam>
         /// <param name="_lengthFunc">Function containing length operation for type T.</param>
-        public static void TeachLength<T>(Teacher.FuncLength<T> _lengthFunc) { DTypeInfo<T>.Length = _lengthFunc; }
+        public static void TeachLength<T>(Teacher.FuncLength<T> _lengthFunc)
+        {
+            DTypeInfo<T>.Length = _lengthFunc;
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof(T)))
+                m_TaughtTypes.Add(typeof(T), new HashSet<TeachType>());
+            m_TaughtTypes[typeof(T)].Add(TeachType.Length);
+        }
+
         /// <summary>
         /// Teach ioDriver how to Lerp type T.
         /// </summary>
         /// <typeparam name="T">Object Type</typeparam>
         /// <param name="_lerpFunc">Function containing LERP opertion for type T</param>
-        public static void TeachLerp<T>(Teacher.FuncLerp<T> _lerpFunc) { DTypeInfo<T>.Lerp = _lerpFunc; }
+        public static void TeachLerp<T>(Teacher.FuncLerp<T> _lerpFunc)
+        {
+            DTypeInfo<T>.Lerp = _lerpFunc;
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof(T)))
+                m_TaughtTypes.Add(typeof(T), new HashSet<TeachType>());
+            m_TaughtTypes[typeof(T)].Add(TeachType.Lerp);
+        }
+
         /// <summary>
         /// Teach ioDriver how to inverse LERP type T.
         /// </summary>
         /// <typeparam name="T">Object Type</typeparam>
         /// <param name="_iLerpFunc">Function containing ILERP operation for type T</param>
-        public static void TeachILerp<T>(Teacher.FuncILerp<T> _iLerpFunc) { DTypeInfo<T>.ILerp = _iLerpFunc; }
+        public static void TeachILerp<T>(Teacher.FuncILerp<T> _iLerpFunc)
+        {
+            DTypeInfo<T>.ILerp = _iLerpFunc;
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof(T)))
+                m_TaughtTypes.Add(typeof(T), new HashSet<TeachType>());
+            m_TaughtTypes[typeof(T)].Add(TeachType.ILerp);
+        }
 
         /// <summary>
         /// Teach ioDriver how to create instances and read dimensional data from type T.
@@ -298,6 +360,12 @@ public static partial class ioDriver
             // Teach dimension data retrieval 
             DTypeInfo<T>.GetDimsFunc = new FuncGetDim<T>[_getFuncs.Length + 1];
             _getFuncs.CopyTo(DTypeInfo<T>.GetDimsFunc, 1);
+
+            if (m_TaughtTypes == null)
+                ioDriver.Init();
+            if (!m_TaughtTypes.ContainsKey(typeof(T)))
+                m_TaughtTypes.Add(typeof(T), new HashSet<TeachType>());
+            m_TaughtTypes[typeof(T)].Add(TeachType.Coord);
         }
 
         /// <summary>
