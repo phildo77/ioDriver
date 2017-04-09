@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
 
@@ -1008,6 +1009,7 @@ public static partial class ioDriver
             /// <returns>Value at specified percentage</returns>
             public abstract T SplineValueAt(float _pct);
 
+            
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
             /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
             protected override void UpdatePath()
@@ -1601,6 +1603,27 @@ public static partial class ioDriver
                 return DTypeInfo<T>.Constructs[DTypeInfo<T>.DimCount](vals);
             }
 
+            /* TODO
+            public T SplineTangentAt(float _pct)
+            {
+                if (_pct <= 0f) _pct = 0;
+                if (_pct >= 1f)
+                    _pct = Closed ? 0f : 1f;
+                var cubPosition = _pct * m_Cubs[m_DimsToSpline[0] - 1].Length;
+                int cubicNum = (int)cubPosition;
+                float cubicPos = (cubPosition - cubicNum);
+
+                float[] vals = new float[DTypeInfo<T>.DimCount];
+                for (int idx = 0; idx < DTypeInfo<T>.DimCount; ++idx)
+                {
+                    if (Contains(m_DimsToSpline, (idx + 1)))
+                        vals[idx] = m_Cubs[idx][cubicNum].EvaluateDeriv(cubicPos);
+                    else
+                        vals[idx] = 0;
+                }
+                return DTypeInfo<T>.Constructs[DTypeInfo<T>.DimCount](vals);
+            }
+            */
             private static CubicValue[] CalcNatCubic(T[] _vals, Teacher.FuncGetDim<T> _funcGetVal)
             {
                 int n = _vals.Length - 1;
@@ -1718,6 +1741,11 @@ public static partial class ioDriver
                 public float Evaluate(float _u)
                 {
                     return (((d * _u) + c) * _u + b) * _u + a;
+                }
+
+                public float EvaluateDeriv(float _u)
+                {
+                    return (3*d*_u + 2*c)*_u + b;
                 }
             }
         }

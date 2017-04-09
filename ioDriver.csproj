@@ -56,6 +56,11 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
+  <PropertyGroup>
+	<UnityPath>C:\Program Files\Unity</UnityPath>
+	<MonoMdbGenerator>"$(UnityPath)\Editor\Data\Mono\lib\mono\2.0\pdb2mdb.exe"</MonoMdbGenerator>
+	<ioDriverTFUCorePath>$(SolutionDir)..\ioDriverToolsForUnity\Assets\ioDriver\Core</ioDriverTFUCorePath>
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
@@ -96,4 +101,18 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+	<Target Name="AfterBuild">
+		<CallTarget Targets="GenerateMonoSymbols" Condition=" Exists('$(OutputPath)\$(AssemblyName).pdb') " />
+	</Target>
+	<Target Name="GenerateMonoSymbols">
+		<Message Text="$(ProjectName) -&gt; $(TargetPath).mdb" Importance="High" />
+		<Exec Command="$(MonoMdbGenerator) $(AssemblyName).dll" WorkingDirectory="$(OutputPath)"/>
+		<CallTarget Targets="CopyDLL" />
+	</Target>
+	<Target Name="CopyDLL">
+		<Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFolder="$(ioDriverTFUCorePath)\" />
+		<Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll.mdb" DestinationFolder="$(ioDriverTFUCorePath)\" />
+		<Copy SourceFiles="$(OutputPath)\$(AssemblyName).xml" DestinationFolder="$(ioDriverTFUCorePath)\" />
+	</Target>
+  
 </Project>
