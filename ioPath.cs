@@ -1,8 +1,10 @@
 ﻿
 using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 
@@ -565,21 +567,6 @@ public static partial class ioDriver
             /// <param name="_closed">Is this a closed path?</param>
             protected Base(List<T> _frameWaypoints, bool _closed)
             {
-#if ioTRIAL
-                if (_frameWaypoints.Count > MAX_PATH_POINT_COUNT)
-                {
-                    Log.Warn("Max of " + MAX_PATH_POINT_COUNT + " points for paths in trial version.  Trimming.", true);
-                    var pts = new List<T>()
-                    {
-                        _frameWaypoints[0],
-                        _frameWaypoints[1],
-                        _frameWaypoints[2],
-                        _frameWaypoints[3],
-                        _frameWaypoints[4]
-                    };
-                    _frameWaypoints = pts;
-                }
-#endif
                 m_FrameWaypoints = _frameWaypoints;
                 m_Closed = _closed;
                 if (!m_Closed) return;
@@ -683,7 +670,50 @@ public static partial class ioDriver
                 return _index == (Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1) ? 1f : m_FrameSegments[_index].PctStart;
             }
 
-            
+            public T GetNearestTo(T _point)
+            {
+                float pct;
+                return GetNearestTo(_point, out pct);
+            }
+
+            public T GetNearestTo(T _point, out float _pctOnPath)
+            {
+                Segment seg;
+                return GetNearestTo(_point, out _pctOnPath, out seg);
+            }
+
+            public T GetNearestTo(T _point, out float _pctOnPath, out Segment _nearestSegment)
+            {
+                var closestDist = float.PositiveInfinity;
+                Segment closestSeg = null;
+                VecN pointOnLine = null;
+                var segs = PathSegments;
+
+                for (int idx = 0; idx < segs.Length; ++idx)
+                {
+                    var curSeg = segs[idx];
+                    var segPtA = ToVecN(PathPoints[curSeg.FromIdx]);
+                    var segPtB = ToVecN(PathPoints[curSeg.FromIdx + 1]);
+                    VecN curPtOnLine = null;
+                    var curDist = VecN.PointToLineDistance(segPtA, segPtB, ToVecN(_point), out curPtOnLine);
+                    if (curDist < closestDist)
+                    {
+                        closestDist = curDist;
+                        pointOnLine = curPtOnLine;
+                        closestSeg = curSeg;
+                    }
+                }
+
+                var nearestOnPath = pointOnLine.To<T>();
+                _nearestSegment = closestSeg;
+                var pctInSeg = VecN.ILerp(ToVecN(PathPoints[closestSeg.FromIdx]), ToVecN(PathPoints[closestSeg.FromIdx + 1]),
+                    ToVecN(nearestOnPath));
+
+                _pctOnPath = Teacher.Lerpf(_nearestSegment.PctStart, _nearestSegment.PctEnd, pctInSeg);
+
+                return nearestOnPath;
+            }
+
 
             /// Add new frame waypoint
             public virtual void AddFrameWaypoint(T _waypoint)
@@ -2011,6 +2041,46 @@ public static partial class ioDriver
                 sb.Append(Vals[idx] + ", ");
             sb.Append(" )");
             return sb.ToString();
+        }
+
+        public static float ILerp(VecN _ptA, VecN _ptB, VecN _value)
+        {
+            var dimCount = _ptA.DimCount;
+            float result = float.NaN;
+
+            if (_ptA == _value) return 0f;
+            if (_ptB == _value) return 1f;
+
+            for (int dim = 0; dim < dimCount; ++dim)
+            {
+                float from = _ptA.Vals[dim];
+                float to = _ptB.Vals[dim];
+                float val = _value.Vals[dim];
+                if (from == to)
+                    continue;
+                result = (from - val)/(from - to);
+            }
+
+            return result;
+        }
+
+        public static float PointToLineDistance(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
+        {
+            var line = _linePtB - _linePtA;
+            var lineMag = line.Magnitude;
+            var lambda = VecN.Dot((_point - _linePtA), line)/lineMag;
+            lambda = Math.Min(Math.Max(0f, lambda),lineMag);
+            var p = line*lambda*(1/lineMag);
+            _pointOnLine = _linePtA + p;
+            return (_linePtA + p - _point).Magnitude;
+        }
+
+        public static VecN NearestPointOnLine(VecN _linePtA, VecN _linePtB, VecN _point)
+        {
+            var lineDir = (_linePtB - _linePtA).Normalized;
+            var v = _point - _linePtA;
+            var d = VecN.Dot(v, lineDir);
+            return _linePtA + lineDir*d;
         }
 
         #endregion Methods
