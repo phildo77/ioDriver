@@ -991,7 +991,13 @@ public static partial class ioDriver
                 set
                 {
                     if (m_SegmentLength == value) return;
-                    m_SegmentLength = value;
+                    if (value <= 0)
+                    {
+                        m_SegmentLength = Defaults.SegmentLength > 0 ? Defaults.SegmentLength : 1f;
+                        Log.Err("Segment length must greater than zero.  Setting to '" + m_SegmentLength + "'");
+                    }
+                    else
+                        m_SegmentLength = value;
                     UpdatePath();
                 }
             }
@@ -1004,16 +1010,18 @@ public static partial class ioDriver
                 get { return m_SegmentAccuracy; }
                 set
                 {
-                    if (value == m_SegmentAccuracy) return;
-                    if (m_SegmentAccuracy <= 0 || m_SegmentAccuracy >= 0.9999f)
+                    if (m_SegmentAccuracy == value) return;
+                    var val = value;
+                    if (value <= 0 || value >= 0.9999f)
                     {
-                        Log.Err("Segment accuracy cannot be less than zero and must be less than 1.  Setting default of '" + Defaults.SegmentAccuracy + "'");
-                        m_SegmentAccuracy = Defaults.SegmentAccuracy;
-                        return;
+                        val = Defaults.SegmentAccuracy <= 0 || Defaults.SegmentAccuracy >= 0.9999f
+                            ? 0.05f
+                            : Defaults.SegmentAccuracy;
+                        Log.Err("Segment accuracy cannot be less than zero and must be less than 1.  Setting to '" + val + "'");
                     }
-                    if (value < m_SegmentAccuracy)
-                        UpdatePath();
-                    m_SegmentAccuracy = value;
+                    bool update = val < m_SegmentAccuracy;
+                    m_SegmentAccuracy = val;
+                    if (update) UpdatePath();
                 }
             
             }
