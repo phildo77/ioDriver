@@ -555,6 +555,14 @@ public static class ioDriverFluency //TODO cleanup/split
         _spline.SegmentLength = _length;
         return _spline;
     }
+
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SegmentAccuracy"/>
+    public static T SetSegmentAccuracy<T>(this T _spline, float _accuracy)
+        where T : ioDriver.ISpline
+    {
+        _spline.SegmentAccuracy = _accuracy;
+        return _spline;
+    }
     
     /// Fluency Method. See <see cref="ioDriver.Path.Spline{T}.DimsToSpline"/>
     public static T SetDimsToSpline<T>(this T _spline, params int[] _dimsToSpline)

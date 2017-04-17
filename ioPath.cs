@@ -75,6 +75,9 @@ public static partial class ioDriver
             set;
         }
 
+        /// See <see cref="Path.Spline{T}.SegmentAccuracy"/>
+        float SegmentAccuracy { get; set; }
+
         #endregion Properties
     }
 
