@@ -802,7 +802,7 @@ public static partial class ioDriver
             {
                 return LerpPath(_pct, ToList(PathPoints), m_PathSegments, Length, false);
             }
-
+            
             /// <summary>
             /// Get this path's frame value at specified percent along frame.
             /// </summary>
@@ -1021,7 +1021,8 @@ public static partial class ioDriver
                     }
                     bool update = val < m_SegmentAccuracy;
                     m_SegmentAccuracy = val;
-                    if (update) UpdatePath();
+                    if (update) 
+                        UpdatePath();
                 }
             
             }
