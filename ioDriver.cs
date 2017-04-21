@@ -1554,13 +1554,7 @@ public static partial class ioDriver
 
         /// <summary>Default ease type for easable driver types. <seealso cref="EaseType"/></summary>
         public static EaseType easeType = EaseType.Linear;
-
-        /// <summary>Default spline segment length. <seealso cref="Path.Spline{T}.SegmentLength"/></summary>
-        public static float SegmentLength = 0.1f;
-
-        /// <summary>Default spline segment length accuracy. <seealso cref="Path.Spline{T}.SegmentAccuracy"/></summary>
-        public static float SegmentAccuracy = 0.05f;
-
+        
         /// Default managed event priority. <seealso cref="IEvent.Priority"/><seealso cref="IEvent.SetPriority"/>
         public static uint EventPriority = 10;
 

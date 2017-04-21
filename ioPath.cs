@@ -1,12 +1,10 @@
 ﻿
 using System;
-using System.CodeDom.Compiler;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using UnityEditorInternal;
 
 
 public static partial class ioDriver
@@ -303,7 +301,7 @@ public static partial class ioDriver
         /// Returns the length of the path.
         protected override float TargetLen()
         {
-            return m_Path.Length;
+            return m_Path.PathLength;
         }
 
         /// Returns the value of the path at specified percent along its length.
@@ -403,7 +401,7 @@ public static partial class ioDriver
         #endregion Nested Interfaces
 
 
-        // TODO fix all of these if static factory bug gets fixed (mono / Unity)
+        // TODO fix all of these if (Call BuildPath in constructor instead of Build here) static factory bug gets fixed (mono / Unity)
         /// <summary>
         /// Create linear path from existing path object's frame.
         /// </summary>
@@ -469,6 +467,22 @@ public static partial class ioDriver
         public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints)
         {
             var path = new Bezier<T>(_frameWaypoints, _closed);
+            path.Build();
+            return path;
+        }
+
+        /// <summary>
+        /// Create new Bezier spline from provided list of frame waypoints.
+        /// </summary>
+        /// <typeparam name="T">Waypoint Type</typeparam>
+        /// <param name="_frameWaypoints">List of waypoints for frame</param>
+        /// <param name="_closed">Closed spline?</param>
+        /// <returns>New Bezier spline object</returns>
+        public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints, Bezier<T>.Control[] _control)
+        {
+            var path = new Bezier<T>(_frameWaypoints, _closed);
+            if (_control != null)
+                path.SetControl(_control);
             path.Build();
             return path;
         }
@@ -562,6 +576,9 @@ public static partial class ioDriver
             /// Is this a closed path?
             protected bool m_Closed;
 
+            /// How long before timeout in <see cref="UpdatePath"/>
+            public float TimeOut = 2f;
+
             /// <summary>
             /// Base path object constructor.  Note that <see cref="Build"/> is not called during construction.
             /// Child classes will need to either call this in their constructor or through a static factory method.
@@ -572,10 +589,12 @@ public static partial class ioDriver
             {
                 m_FrameWaypoints = _frameWaypoints;
                 m_Closed = _closed;
-                if (!m_Closed) return;
                 //If closed enforce that first and last are not equal.
-                if (m_FrameWaypoints[0].Equals(m_FrameWaypoints[m_FrameWaypoints.Count - 1]))
-                    m_FrameWaypoints.RemoveAt(m_FrameWaypoints.Count - 1);
+                if (m_Closed)
+                    if (m_FrameWaypoints[0].Equals(m_FrameWaypoints[m_FrameWaypoints.Count - 1]))
+                        m_FrameWaypoints.RemoveAt(m_FrameWaypoints.Count - 1);
+
+                BuildFrame();
             }
 
             /// Is this a closed path?  <see cref="Build"/> is called on change.
@@ -591,7 +610,7 @@ public static partial class ioDriver
             }
 
             /// Get the length of the path.
-            public float Length
+            public float PathLength
             {
                 get
                 {
@@ -604,7 +623,7 @@ public static partial class ioDriver
 
             /// Get the length of the path's frame (Linear path), including
             /// final segment if closed.
-            protected float m_FrameLength
+            public float FrameLength
             {
                 get
                 {
@@ -800,9 +819,9 @@ public static partial class ioDriver
             /// <returns></returns>
             public T ValueAt(float _pct)
             {
-                return LerpPath(_pct, ToList(PathPoints), m_PathSegments, Length, false);
+                return LerpPath(_pct, ToList(PathPoints), m_PathSegments, PathLength, false);
             }
-            
+
             /// <summary>
             /// Get this path's frame value at specified percent along frame.
             /// </summary>
@@ -813,15 +832,12 @@ public static partial class ioDriver
                 var frmPts = ToList(m_FrameWaypoints);
                 if (Closed)
                     frmPts.Add(m_FrameWaypoints[0]);
-                return LerpPath(_pct, m_FrameWaypoints, m_FrameSegments, m_FrameLength, m_Closed);
+                return LerpPath(_pct, m_FrameWaypoints, m_FrameSegments, FrameLength, m_Closed);
             }
 
 
-            /// Updates frame segment data.  Makes call to abstract <see cref="UpdatePath"/>
-            public void Build()
+            private void BuildFrame()
             {
-
-                //TODO make protected when static factory is fixed
                 var totLen = 0f;
                 var lengths = new float[m_Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1];
                 for (int idx = 0; idx < m_FrameWaypoints.Count - 1; ++idx)
@@ -844,12 +860,37 @@ public static partial class ioDriver
                     cumLen += lengths[idx];
                     m_FrameSegments.Add(new Segment(idx, startLen / totLen, cumLen / totLen, lengths[idx]));
                 }
+            }
 
-                UpdatePath();
+            /// Updates frame segment data.  Makes call to abstract <see cref="UpdatePath"/>
+            public void Build()
+            {
+
+                //TODO make protected when static factory is fixed
+
+                BuildFrame();
+                DoBuildPath();
+
             }
 
             /// Override to update <see cref="PathPoints"/> and <see cref="PathSegments"/> here.
-            protected abstract void UpdatePath();
+            /// This function is iterated until done or until time out.
+            protected abstract IEnumerator BuildPath();
+
+            protected void DoBuildPath()
+            {
+                var startTicks = System.DateTime.Now.Ticks;
+                while (BuildPath().MoveNext())
+                {
+                    Log.Info("Out Iteration");
+                    var curTime = (System.DateTime.Now.Ticks - startTicks) / System.TimeSpan.TicksPerMillisecond;
+                    if (curTime >= TimeOut)
+                    {
+                        Log.Err("Time out on BuildPath");
+                        break;
+                    }
+                }
+            }
 
             /// Object representing segment between two points on a <see cref="Base{T}"/>.
             /// Convenience data carrier.
@@ -966,10 +1007,11 @@ public static partial class ioDriver
             /// Backing field for <see cref="DimsToSpline"/>
             protected int[] m_DimsToSpline;
 
-            /// Backing field for <see cref="SegmentLength"/><seealso cref="Defaults.SegmentLength"/>
-            protected float m_SegmentLength = Defaults.SegmentLength;
+            /// Backing field for <see cref="SegmentLength"/>
+            protected float m_SegmentLength;
 
-            private float m_SegmentAccuracy = Defaults.SegmentAccuracy;
+            /// Backing field for <see cref="SegmentAccuracy"/>
+            private float m_SegmentAccuracy;
 
 
             /// <summary>
@@ -980,25 +1022,29 @@ public static partial class ioDriver
                 : base(_frameWaypoints, _closed)
             {
                 m_DimsToSpline = CheckDims(null);
+                m_SegmentLength = GetDefaultSegmentLength();
             }
-            
+
             /// Get/Set spline segment lengths.  
             /// Calls <see cref="UpdatePath"/> on change.
             /// Setting this to a new value will rebuild the spline.
             public float SegmentLength
             {
-                get { return m_SegmentLength; }
+                get
+                {
+                    return m_SegmentLength;
+                }
                 set
                 {
                     if (m_SegmentLength == value) return;
                     if (value <= 0)
                     {
-                        m_SegmentLength = Defaults.SegmentLength > 0 ? Defaults.SegmentLength : 1f;
+                        m_SegmentLength = GetDefaultSegmentLength();
                         Log.Err("Segment length must greater than zero.  Setting to '" + m_SegmentLength + "'");
                     }
                     else
                         m_SegmentLength = value;
-                    UpdatePath();
+                    DoBuildPath();
                 }
             }
 
@@ -1014,17 +1060,15 @@ public static partial class ioDriver
                     var val = value;
                     if (value <= 0 || value >= 0.9999f)
                     {
-                        val = Defaults.SegmentAccuracy <= 0 || Defaults.SegmentAccuracy >= 0.9999f
-                            ? 0.05f
-                            : Defaults.SegmentAccuracy;
+                        val = 0.25f;
                         Log.Err("Segment accuracy cannot be less than zero and must be less than 1.  Setting to '" + val + "'");
                     }
                     bool update = val < m_SegmentAccuracy;
                     m_SegmentAccuracy = val;
-                    if (update) 
-                        UpdatePath();
+                    if (update)
+                        DoBuildPath();
                 }
-            
+
             }
 
             /// List of dimensions to be splined from frame waypoints.
@@ -1037,7 +1081,7 @@ public static partial class ioDriver
                     var dimsToSpline = CheckDims(value);
                     if (dimsToSpline == m_DimsToSpline) return;
                     m_DimsToSpline = dimsToSpline;
-                    UpdatePath();
+                    DoBuildPath();
                 }
             }
 
@@ -1051,18 +1095,24 @@ public static partial class ioDriver
             /// <returns>Value at specified percentage</returns>
             public abstract T SplineValueAt(float _pct);
 
-            
+            public float GetDefaultSegmentLength()
+            {
+                return FrameLength / 10f;
+            }
+
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
             /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
-            protected override void UpdatePath()
+            protected override IEnumerator BuildPath()
             {
 
                 if (m_SegmentLength <= 0)
                     m_SegmentLength = 0.1f;
+                if (m_SegmentAccuracy <= 0 || m_SegmentAccuracy >= 1f)
+                    m_SegmentAccuracy = 0.3f;
 
                 float allowedError = m_SegmentLength * m_SegmentAccuracy;
 
-                float estLen = m_FrameLength;
+                float estLen = FrameLength;
 
                 float toCheckPct = m_SegmentLength / estLen;
                 float fromCheckPct = 0;
@@ -1077,6 +1127,9 @@ public static partial class ioDriver
                 var path = new List<T> { m_FrameWaypoints[0] };
                 var totalLength = 0f;
                 var lengths = new List<float>();
+
+                var iterCountTgt = 50;
+                var iterCount = 0;
                 while (!done)
                 {
                     var pctSpan = toCheckPct - fromCheckPct;
@@ -1119,6 +1172,12 @@ public static partial class ioDriver
                     lengths.Add(len);
                     path.Add(SplineValueAt(toCheckPct));
 
+                    if (++iterCount >= iterCountTgt)
+                    {
+                        iterCount = 0;
+                        yield return false;
+                    }
+
                     if (done)
                         break;
                     var nextPctAdder = toCheckPct - fromCheckPct;
@@ -1139,12 +1198,12 @@ public static partial class ioDriver
                 m_PathSegments = new List<Segment>();
                 for (int idx = 0; idx < PathPoints.Length - 1; ++idx)
                 {
-                    var frmPct = progressLen/totalLength;
+                    var frmPct = progressLen / totalLength;
                     progressLen += lengths[idx];
-                    var toPct = progressLen/totalLength;
+                    var toPct = progressLen / totalLength;
                     m_PathSegments.Add(new Segment(idx, frmPct, toPct, lengths[idx]));
                 }
-
+                yield break;
             }
 
             /// <summary>
@@ -1185,7 +1244,7 @@ public static partial class ioDriver
                 var distFromEnd = DTypeInfo<T>.Length(segEndWp, waypoint);
                 var pctOfDist = distFromStart / (distFromStart / distFromEnd);
                 var pctInSeg = nearestSeg.Length * pctOfDist;
-                var lengthPct = nearestSeg.Length / Length;
+                var lengthPct = nearestSeg.Length / PathLength;
                 var pctAdder = pctInSeg * lengthPct;
                 return nearestSeg.PctStart + pctAdder;
             }
@@ -1227,7 +1286,7 @@ public static partial class ioDriver
             public Bezier(List<T> _frameWaypoints, bool _closed)
                 : base(_frameWaypoints, _closed)
             {
-                m_Control = Control.CreateDefault(this);
+                m_Control = CreateDefaultCtl();
             }
 
             //TODO fix when static factory bug is fixed (mono/unity)
@@ -1246,11 +1305,6 @@ public static partial class ioDriver
                 return bez;
             }*/
 
-            /// Control data for each frame waypoint
-            public Control[] control
-            {
-                get { return m_Control; }
-            }
 
             /// <summary>
             /// Bezier base calculation.
@@ -1271,6 +1325,7 @@ public static partial class ioDriver
                 return p;
             }
 
+            /*
             private static float bezier(float _pct, Control _a, Control _b, Teacher.FuncGetDim<T> _funcGetVal)
             {
                 return bezier(_pct,
@@ -1279,6 +1334,7 @@ public static partial class ioDriver
                     _funcGetVal(_b.InPt),
                     _funcGetVal(_b.Waypoint));
             }
+             * */
 
             /// <summary>
             /// Get value along bezier spline at specified percent.  Calculated
@@ -1306,14 +1362,21 @@ public static partial class ioDriver
                 float segPct = (_pct - GetFrameWaypointPct(idxA)) / pctSpan;
                 if (idxB == m_FrameWaypoints.Count) idxB = 0;
 
-                var cntlA = m_Control[idxA];
-                var cntlB = m_Control[idxB];
 
                 float[] vals = new float[DTypeInfo<T>.DimCount];
                 for (int idx = 0; idx < DTypeInfo<T>.DimCount; ++idx)
                 {
+                    var getDim = DTypeInfo<T>.GetDimsFunc[idx + 1];
+                    var p0 = getDim(m_FrameWaypoints[idxA]);
+                    var p1 = p0 + getDim(m_Control[idxA].OutVec);
+                    var p3 = getDim(m_FrameWaypoints[idxB]);
+                    var p2 = p3 + getDim(m_Control[idxB].InVec);
                     if (Contains(m_DimsToSpline, (idx + 1)))
-                        vals[idx] = bezier(segPct, cntlA, cntlB, DTypeInfo<T>.GetDimsFunc[idx + 1]);
+                    {
+                        vals[idx] = bezier(segPct, p0, p1, p2, p3);
+                        //vals[idx] = bezier(segPct, cntlA, cntlB, DTypeInfo<T>.GetDimsFunc[idx + 1]);
+                    }
+
                     else
                         vals[idx] = DTypeInfo<T>.GetDimsFunc[idx + 1](FrameWaypointValueAt(_pct));
                 }
@@ -1322,21 +1385,132 @@ public static partial class ioDriver
             }
 
             /// <summary>
+            /// Create default control for specified waypoint along spline.
+            /// </summary>
+            /// <param name="_idx">Index of waypoint to create control for</param>
+            /// <returns>Created control object</returns>
+            public Control CreateDefaultCtl(int _idx)
+            {
+                var wps = m_FrameWaypoints;
+                var n = wps.Count;
+
+                var wp = ToVecN(wps[_idx]);
+                VecN from = null;
+                VecN to = null;
+                if (_idx == 0)
+                    from = Closed ? ToVecN(wps[n - 1]) : wp;
+                else if (_idx == n - 1)
+                    to = Closed ? ToVecN(wps[0]) : wp;
+
+                from = from ?? ToVecN(wps[_idx - 1]);
+                to = to ?? ToVecN(wps[_idx + 1]);
+
+                var vOut = (to - from).Normalized;
+                var vIn = vOut;
+                var defaultMag = (to - from).Magnitude * Defaults.BezierMagPct;
+                if (wp != to)
+                    vOut *= defaultMag;
+
+                if (wp != from)
+                    vIn *= defaultMag;
+
+                var cntl = new Control(vOut.To<T>(), vIn.Magnitude, vOut.Magnitude);
+                return cntl;
+            }
+
+            /// <summary>
+            /// Create default control for specified bezier spline.
+            /// </summary>
+            /// Creates colinear control with magnitude based on neighboring waypoint data.
+            /// <param name="_parent">Bezier object to create control data for</param>
+            /// <returns>List of control objects</returns>
+            public Control[] CreateDefaultCtl()
+            {
+                var control = new List<Control>();
+                for (int idx = 0; idx < m_FrameWaypoints.Count; ++idx)
+                    control.Add(CreateDefaultCtl(idx));
+                return control.ToArray();
+            }
+
+            public Control[] GetControl()
+            {
+                var cntl = new Control[m_Control.Length];
+                for (int idx = 0; idx < m_Control.Length; ++idx)
+                {
+                    cntl[idx] = new Control(m_Control[idx]);
+                }
+                return cntl;
+            }
+
+            public void SetControl(Control[] _newControl)
+            {
+                if (_newControl.Length != m_Control.Length)
+                {
+                    Log.Err("SetControl : New control array length does not match.  Got " + _newControl.Length +
+                            " and expected " + m_Control.Length);
+                    return;
+                }
+
+                for (int idx = 0; idx < _newControl.Length; ++idx)
+                    m_Control[idx] = _newControl[idx];
+
+                DoBuildPath();
+            }
+
+            public void SetControl(int _wayptIdx, Control _control)
+            {
+                if (_wayptIdx < 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                {
+                    Log.Err("SetControl : Waypoint index out of range.  Got " + _wayptIdx);
+                    return;
+                }
+
+                m_Control[_wayptIdx] = _control;
+                DoBuildPath();
+            }
+
+            public void SetControlOutPt(int _wayptIdx, T _outPt)
+            {
+                if (_wayptIdx <= 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                {
+                    Log.Err("SetControlOutPt : Waypoint index out of range.  Got " + _wayptIdx);
+                    return;
+                }
+                var cntl = m_Control[_wayptIdx];
+                var wayPt = ToVecN(m_FrameWaypoints[_wayptIdx]);
+                var outPt = ToVecN(_outPt);
+                var newVec = (outPt - wayPt);
+                if (ToVecN(cntl.OutVec) == newVec) return;
+                cntl.OutVec = newVec.To<T>();
+                DoBuildPath();
+            }
+
+            public void SetControlInPt(int _wayptIdx, T _inPt)
+            {
+                if (_wayptIdx <= 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                {
+                    Log.Err("SetControlInPt : Waypoint index out of range.  Got " + _wayptIdx);
+                    return;
+                }
+                var cntl = m_Control[_wayptIdx];
+                var wayPt = ToVecN(m_FrameWaypoints[_wayptIdx]);
+                var inPt = ToVecN(_inPt);
+                var newVec = (inPt - wayPt);
+                if (newVec == ToVecN(cntl.InVec)) return;
+                cntl.InVec = newVec.To<T>();
+                DoBuildPath();
+            }
+
+
+            /// <summary>
             /// Contains control information for the spline
             /// </summary>
             public class Control
             {
-                /// Get the waypoint index for this control object.
-                public int Index
-                {
-                    get;
-                    private set;
-                }
 
                 private bool m_Colinear = true;
                 private VecN m_VIn;
                 private VecN m_VOut;
-                private Bezier<T> m_Parent;
 
                 /// <summary>
                 /// Bezier control object constructor
@@ -1346,32 +1520,21 @@ public static partial class ioDriver
                 /// <param name="_tanOutDir">Tangent out direction (in direction will be opposite, colinear)</param>
                 /// <param name="_inMag">Distance to place IN control point from waypoint along tangent.</param>
                 /// <param name="_outMag">Distance to place OUT control point from waypoint along tangent</param>
-                public Control(Bezier<T> _parent, int _index, T _tanOutDir, float _inMag, float _outMag)
+                public Control(T _tanOutDir, float _inMag, float _outMag)
                 {
-                    m_Parent = _parent;
-                    Index = _index;
                     var outDir = ToVecN(_tanOutDir).Normalized;
                     m_VIn = -outDir * _inMag;
                     m_VOut = outDir * _outMag;
                     m_Colinear = true;
                 }
 
-                /// <summary>
-                /// Bezier control object constructor
-                /// </summary>
-                /// <param name="_parent">Reference to parent Bezier spline object</param>
-                /// <param name="_index">Waypoint index this control point is tied to</param>
-                /// <param name="_InPt">World space point defining end of "in" control vector, pointing away from waypoint</param>
-                /// <param name="_OutPt">World space point defining end of "out" control vector, pointing away from waypoint</param>
-                /// <param name="_colinear">Should the control vectors be colinear?</param>
-                public Control(Bezier<T> _parent, int _index, T _InPt, T _OutPt, bool _colinear)
+                public Control(T _inVec, T _outVec, bool _colinear = true)
                 {
-                    m_Parent = _parent;
-                    Index = _index;
-                    m_VIn = ToVecN(_InPt) - m_Waypoint;
-                    m_VOut = ToVecN(_OutPt) - m_Waypoint;
+                    m_VIn = ToVecN(_inVec);
+                    m_VOut = ToVecN(_outVec);
                     m_Colinear = _colinear;
                 }
+
 
                 /// <summary>
                 /// Bezier control object constructor, copy data from provided control object
@@ -1379,10 +1542,8 @@ public static partial class ioDriver
                 /// <param name="_parent">Reference to parent Bezier spline object</param>
                 /// <param name="_index">Waypoint index this control point is tied to</param>
                 /// <param name="_control">Control data to copy</param>
-                public Control(Bezier<T> _parent, int _index, Control _control)
+                public Control(Control _control)
                 {
-                    m_Parent = _parent;
-                    Index = _index;
                     m_VIn = _control.m_VIn;
                     m_VOut = _control.m_VOut;
                     m_Colinear = _control.Colinear;
@@ -1392,55 +1553,9 @@ public static partial class ioDriver
                 {
                 }
 
-                /// <summary>
-                /// Create default control for specified bezier spline.
-                /// </summary>
-                /// Creates colinear control with magnitude based on neighboring waypoint data.
-                /// <param name="_parent">Bezier object to create control data for</param>
-                /// <returns>List of control objects</returns>
-                public static Control[] CreateDefault(Bezier<T> _parent)
-                {
-                    var control = new List<Control>();
-                    for (int idx = 0; idx < _parent.m_FrameWaypoints.Count; ++idx)
-                        control.Add(CreateDefault(_parent, idx));
-                    return control.ToArray();
-                }
 
-                /// <summary>
-                /// Create default control for specified waypoint along spline.
-                /// </summary>
-                /// <param name="_parent">Spline object</param>
-                /// <param name="_idx">Index of waypoint to create control for</param>
-                /// <returns>Created control object</returns>
-                public static Control CreateDefault(Bezier<T> _parent, int _idx)
-                {
-                    var c = new Control();
-                    c.m_Parent = _parent;
-                    c.Index = _idx;
-                    var wps = _parent.m_FrameWaypoints;
-                    var n = wps.Count;
 
-                    var wp = ToVecN(wps[_idx]);
-                    VecN from = null;
-                    VecN to = null;
-                    if (_idx == 0)
-                        from = _parent.Closed ? ToVecN(wps[n - 1]) : wp;
-                    else if (_idx == n - 1)
-                        to = _parent.Closed ? ToVecN(wps[0]) : wp;
 
-                    from = from ?? ToVecN(wps[_idx - 1]);
-                    to = to ?? ToVecN(wps[_idx + 1]);
-
-                    c.m_VOut = (to - from).Normalized;
-                    c.m_VIn = -c.m_VOut;
-                    if (wp != to)
-                        c.m_VOut *= (to - from).Magnitude * Defaults.BezierMagPct;
-
-                    if (wp != from)
-                        c.m_VIn *= (to - from).Magnitude * Defaults.BezierMagPct;
-                    c.Colinear = true;
-                    return c;
-                }
 
                 /// Get/Set whether this control object is colinear.  (In/Out tangents are forced opposite directions)
                 public bool Colinear
@@ -1464,7 +1579,6 @@ public static partial class ioDriver
                         if (m_VIn.Magnitude == value) return;
                         var mag = Math.Abs(value);
                         m_VIn = m_VIn.Normalized * mag;
-                        m_Parent.UpdatePath();
                     }
                 }
 
@@ -1477,14 +1591,7 @@ public static partial class ioDriver
                         if (m_VOut.Magnitude == value) return;
                         var mag = Math.Abs(value);
                         m_VOut = m_VOut.Normalized * mag;
-                        m_Parent.UpdatePath();
                     }
-                }
-
-                /// Waypoint on original path.  Spline will pass through this point.
-                public T Waypoint
-                {
-                    get { return m_Waypoint.To<T>(); }
                 }
 
                 /// Get tangent direction pointing towards the OUT control point (from waypoint)
@@ -1499,35 +1606,6 @@ public static partial class ioDriver
                     get { return Colinear ? (-m_VOut).Normalized.To<T>() : m_VIn.Normalized.To<T>(); }
                 }
 
-                /// Out control point
-                public T OutPt
-                {
-                    get { return (m_Waypoint + m_VOut).To<T>(); }
-                    set
-                    {
-                        var outPt = ToVecN(value);
-                        if (ToVecN(OutPt) == outPt) return;
-                        m_VOut = outPt - m_Waypoint;
-                        if (Colinear)
-                            m_VIn = -(m_VOut.Normalized) * InMag;
-                        m_Parent.UpdatePath();
-                    }
-                }
-
-                /// In control point
-                public T InPt
-                {
-                    get { return (m_Waypoint + m_VIn).To<T>(); }
-                    set
-                    {
-                        var inPt = ToVecN(value);
-                        if (ToVecN(InPt) == inPt) return;
-                        m_VIn = inPt - m_Waypoint;
-                        if (Colinear)
-                            m_VOut = -(m_VIn.Normalized) * OutMag;
-                        m_Parent.UpdatePath();
-                    }
-                }
 
                 /// Get/Set "In" control vector (waypoint to in control point)
                 public T InVec
@@ -1540,7 +1618,6 @@ public static partial class ioDriver
                         m_VIn = inVec;
                         if (Colinear)
                             m_VOut = -(m_VIn.Normalized) * OutMag;
-                        m_Parent.UpdatePath();
                     }
                 }
 
@@ -1555,20 +1632,9 @@ public static partial class ioDriver
                         m_VOut = outVec;
                         if (Colinear)
                             m_VIn = -(m_VOut.Normalized) * InMag;
-                        m_Parent.UpdatePath();
                     }
                 }
 
-                private VecN m_Waypoint
-                {
-                    get { return ToVecN(m_Parent.m_FrameWaypoints[Index]); }
-                }
-
-                /// Set the waypoint index for this control object.
-                public void SetIndex(int _index)
-                {
-                    Index = _index;
-                }
             }
         }
 
@@ -1608,7 +1674,7 @@ public static partial class ioDriver
             }*/
 
             /// Updates cubic values then calls base spline <see cref="Spline{T}.UpdatePath"/>
-            protected override void UpdatePath()
+            protected override IEnumerator BuildPath()
             {
                 m_Cubs = new CubicValue[DTypeInfo<T>.DimCount][];
                 foreach (var dim in m_DimsToSpline)
@@ -1616,7 +1682,7 @@ public static partial class ioDriver
                         ? CalcNatCubic(m_FrameWaypoints.ToArray(), DTypeInfo<T>.GetDimsFunc[dim])
                         : CalcNatCubicClosed(m_FrameWaypoints.ToArray(), DTypeInfo<T>.GetDimsFunc[dim]);
 
-                base.UpdatePath();
+                return base.BuildPath();
             }
 
             /// <summary>
@@ -1787,7 +1853,7 @@ public static partial class ioDriver
 
                 public float EvaluateDeriv(float _u)
                 {
-                    return (3*d*_u + 2*c)*_u + b;
+                    return (3 * d * _u + 2 * c) * _u + b;
                 }
             }
         }
@@ -1828,13 +1894,14 @@ public static partial class ioDriver
             }*/
 
             /// Builds PathPoints and PathSegments
-            protected override void UpdatePath()
+            protected override IEnumerator BuildPath()
             {
                 var points = new List<T>(m_FrameWaypoints);
                 if (Closed)
                     points.Add(m_FrameWaypoints[0]);
                 PathPoints = points.ToArray();
                 m_PathSegments = m_FrameSegments;
+                yield break;
             }
         }
 
@@ -2070,7 +2137,7 @@ public static partial class ioDriver
                 float val = _value.Vals[dim];
                 if (from == to)
                     continue;
-                result = (from - val)/(from - to);
+                result = (from - val) / (from - to);
             }
 
             return result;
@@ -2080,9 +2147,9 @@ public static partial class ioDriver
         {
             var line = _linePtB - _linePtA;
             var lineMag = line.Magnitude;
-            var lambda = VecN.Dot((_point - _linePtA), line)/lineMag;
-            lambda = Math.Min(Math.Max(0f, lambda),lineMag);
-            var p = line*lambda*(1/lineMag);
+            var lambda = VecN.Dot((_point - _linePtA), line) / lineMag;
+            lambda = Math.Min(Math.Max(0f, lambda), lineMag);
+            var p = line * lambda * (1 / lineMag);
             _pointOnLine = _linePtA + p;
             return (_linePtA + p - _point).Magnitude;
         }
@@ -2092,7 +2159,7 @@ public static partial class ioDriver
             var lineDir = (_linePtB - _linePtA).Normalized;
             var v = _point - _linePtA;
             var d = VecN.Dot(v, lineDir);
-            return _linePtA + lineDir*d;
+            return _linePtA + lineDir * d;
         }
 
         #endregion Methods
