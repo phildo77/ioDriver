@@ -293,11 +293,12 @@ namespace ioDriverUnity
         {
             get
             {
+                /* TODO too many inits in editor.  Why is this here?
                 if (!UnityEngine.Application.isPlaying)
                 {
                     ioDriver.Reset();
                     return null;
-                }
+                }*/
                 if (applicationIsQuitting)
                 {
                     return null;

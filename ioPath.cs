@@ -1,10 +1,9 @@
 ﻿
 using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
-using UnityEditorInternal;
 
 
 public static partial class ioDriver
@@ -101,9 +100,9 @@ public static partial class ioDriver
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_pathObj">this path object</param>
     /// <returns>New cubic spline</returns>
-    public static Path.Cubic<T> SplineCubic<T>(this Path.Base<T> _pathObj)
+    public static Path.Cubic<T> SplineCubic<T>(this Path.Base<T> _pathObj, bool _autoBuild = true)
     {
-        return Path.CreateCubic(_pathObj);
+        return Path.CreateCubic(_pathObj, _autoBuild);
     }
 
     /// <summary>
@@ -113,9 +112,9 @@ public static partial class ioDriver
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_pathObj">this path object</param>
     /// <returns>New Bezier spline</returns>
-    public static Path.Bezier<T> SplineBezier<T>(this Path.Base<T> _pathObj)
+    public static Path.Bezier<T> SplineBezier<T>(this Path.Base<T> _pathObj, bool _autoBuild = true)
     {
-        return Path.CreateBezier(_pathObj);
+        return Path.CreateBezier(_pathObj, _autoBuild);
     }
 
     /// <summary>
@@ -124,9 +123,9 @@ public static partial class ioDriver
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_splineObj">this spline</param>
     /// <returns>New linear path</returns>
-    public static Path.Linear<T> CreateLinearFromFrame<T>(this Path.Spline<T> _splineObj)
+    public static Path.Linear<T> CreateLinearFromFrame<T>(this Path.Spline<T> _splineObj, bool _autoBuild = true)
     {
-        return Path.CreateLinear(_splineObj);
+        return Path.CreateLinear(_splineObj, _autoBuild);
     }
 
     /// <summary>
@@ -135,9 +134,9 @@ public static partial class ioDriver
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_splineObj">this spline</param>
     /// <returns>New linear path</returns>
-    public static Path.Linear<T> CreateLinearFromSpline<T>(this Path.Spline<T> _splineObj)
+    public static Path.Linear<T> CreateLinearFromSpline<T>(this Path.Spline<T> _splineObj, bool _autoBuild = true)
     {
-        return Path.CreateLinear(_splineObj.Closed, ToList(_splineObj.PathPoints));
+        return Path.CreateLinear(_splineObj.Closed, ToList(_splineObj.PathPoints), _autoBuild);
     }
 
 
@@ -408,10 +407,10 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint type</typeparam>
         /// <param name="_pathObj">Path to copy wayponts from</param>
         /// <returns>New linear path object</returns>
-        public static Linear<T> CreateLinear<T>(Path.Base<T> _pathObj)
+        public static Linear<T> CreateLinear<T>(Path.Base<T> _pathObj, bool _autoBuild = true)
         {
-            var path = new Linear<T>(ToList(_pathObj.GetFrameWaypoints()), _pathObj.Closed);
-            path.Build();
+            var path = new Linear<T>(ToList(_pathObj.GetFrameWaypoints()), _pathObj.Closed, _autoBuild);
+            if (_autoBuild) path.Build();
             return path;
         }
 
@@ -423,24 +422,10 @@ public static partial class ioDriver
         /// <param name="_waypoints">List of waypoints</param>
         /// <param name="_closed">Closed path?</param>
         /// <returns>New linear path object</returns>
-        public static Linear<T> CreateLinear<T>(bool _closed, List<T> _waypoints)
+        public static Linear<T> CreateLinear<T>(bool _closed, List<T> _waypoints, bool _autoBuild = true)
         {
-            var path = new Linear<T>(_waypoints, _closed);
-            path.Build();
-            return path;
-        }
-
-        /// <summary>
-        /// Create new linear path from provided waypoint params.
-        /// </summary>
-        /// <typeparam name="T">Waypoint type</typeparam>
-        /// <param name="_closed">Closed spline?</param>
-        /// <param name="_waypoints">List of waypoints</param>
-        /// <returns>New linear path object</returns>
-        public static Linear<T> CreateLinear<T>(bool _closed, params T[] _waypoints)
-        {
-            var path = new Linear<T>(ToList(_waypoints), _closed);
-            path.Build();
+            var path = new Linear<T>(_waypoints, _closed, _autoBuild);
+            if (_autoBuild) path.Build();
             return path;
         }
 
@@ -450,10 +435,10 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint Type</typeparam>
         /// <param name="_pathObj">Path object containing waypoints to use</param>
         /// <returns>New Bezier spline object</returns>
-        public static Bezier<T> CreateBezier<T>(Base<T> _pathObj)
+        public static Bezier<T> CreateBezier<T>(Base<T> _pathObj, bool _autoBuild = true)
         {
-            var path = new Bezier<T>(ToList(_pathObj.GetFrameWaypoints()), _pathObj.Closed);
-            path.Build();
+            var path = new Bezier<T>(ToList(_pathObj.GetFrameWaypoints()), _pathObj.Closed, _autoBuild);
+            if (_autoBuild) path.Build();
             return path;
         }
 
@@ -464,43 +449,13 @@ public static partial class ioDriver
         /// <param name="_frameWaypoints">List of waypoints for frame</param>
         /// <param name="_closed">Closed spline?</param>
         /// <returns>New Bezier spline object</returns>
-        public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints)
+        public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints, bool _autoBuild = true)
         {
-            var path = new Bezier<T>(_frameWaypoints, _closed);
-            path.Build();
+            var path = new Bezier<T>(_frameWaypoints, _closed, _autoBuild);
+            if (_autoBuild) path.Build();
             return path;
         }
 
-        /// <summary>
-        /// Create new Bezier spline from provided list of frame waypoints.
-        /// </summary>
-        /// <typeparam name="T">Waypoint Type</typeparam>
-        /// <param name="_frameWaypoints">List of waypoints for frame</param>
-        /// <param name="_closed">Closed spline?</param>
-        /// <returns>New Bezier spline object</returns>
-        public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints, Bezier<T>.Control[] _control)
-        {
-            var path = new Bezier<T>(_frameWaypoints, _closed);
-            if (_control != null)
-                path.SetControl(_control);
-            path.Build();
-            return path;
-        }
-
-        /// <summary>
-        /// Create new Bezier spline from provided frame waypoint params.
-        /// </summary>
-        /// <typeparam name="T">Waypoint Type</typeparam>
-        /// <param name="_closed">Closed spline?</param>
-        /// <param name="_frameWaypoints">List of waypoints for frame</param>
-        /// <returns>New Bezier spline object</returns>
-        public static Bezier<T> CreateBezier<T>(bool _closed, params T[] _frameWaypoints)
-        {
-            var waypoints = ToList(_frameWaypoints);
-            var path = new Bezier<T>(waypoints, _closed);
-            path.Build();
-            return path;
-        }
 
         /// <summary>
         /// Create new cubic spline from provided path object's frame.
@@ -508,10 +463,10 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint type</typeparam>
         /// <param name="_pathObj">Path object</param>
         /// <returns>New cubic spline object</returns>
-        public static Cubic<T> CreateCubic<T>(Base<T> _pathObj)
+        public static Cubic<T> CreateCubic<T>(Base<T> _pathObj, bool _autoBuild = true)
         {
-            var path = new Cubic<T>(ToList(_pathObj.GetFrameWaypoints()), _pathObj.Closed);
-            path.Build();
+            var path = new Cubic<T>(ToList(_pathObj.GetFrameWaypoints()), _pathObj.Closed, _autoBuild);
+            if (_autoBuild) path.Build();
             return path;
         }
 
@@ -522,28 +477,12 @@ public static partial class ioDriver
         /// <param name="_frameWaypoints">List of waypoints for frame</param>
         /// <param name="_closed">Closed spline?</param>
         /// <returns>New cubic spline object</returns>
-        public static Cubic<T> CreateCubic<T>(bool _closed, List<T> _frameWaypoints)
+        public static Cubic<T> CreateCubic<T>(bool _closed, List<T> _frameWaypoints, bool _autoBuild = true)
         {
-            var path = new Cubic<T>(_frameWaypoints, _closed);
-            path.Build();
+            var path = new Cubic<T>(_frameWaypoints, _closed, _autoBuild);
+            if (_autoBuild) path.Build();
             return path;
         }
-
-        /// <summary>
-        /// Create new cubic spline from provided frame waypoint params.
-        /// </summary>
-        /// <typeparam name="T">Waypoint Type</typeparam>
-        /// <param name="_closed">Closed spline?</param>
-        /// <param name="_frameWaypoints">List of waypoints for frame</param>
-        /// <returns>New cubic spline object</returns>
-        public static Cubic<T> CreateCubic<T>(bool _closed, params T[] _frameWaypoints)
-        {
-            var path = new Cubic<T>(ToList(_frameWaypoints), _closed);
-            path.Build();
-            return path;
-        }
-
-
 
         #region Other
 
@@ -576,8 +515,12 @@ public static partial class ioDriver
             /// Is this a closed path?
             protected bool m_Closed;
 
-            /// How long before timeout in <see cref="UpdatePath"/>
-            public float TimeOut = 2f;
+            /// How long before timeout in <see cref="BuildPath"/>
+            public float TimeOut = 1000;
+
+            public bool IsValid { get; private set; }
+
+            public bool AutoBuild;
 
             /// <summary>
             /// Base path object constructor.  Note that <see cref="Build"/> is not called during construction.
@@ -585,9 +528,9 @@ public static partial class ioDriver
             /// </summary>
             /// <param name="_frameWaypoints">List of waypoints used to define path's frame</param>
             /// <param name="_closed">Is this a closed path?</param>
-            protected Base(List<T> _frameWaypoints, bool _closed)
+            protected Base(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
             {
-                m_FrameWaypoints = _frameWaypoints;
+                m_FrameWaypoints = _frameWaypoints.ToList();
                 m_Closed = _closed;
                 //If closed enforce that first and last are not equal.
                 if (m_Closed)
@@ -595,6 +538,8 @@ public static partial class ioDriver
                         m_FrameWaypoints.RemoveAt(m_FrameWaypoints.Count - 1);
 
                 BuildFrame();
+                IsValid = false;
+                AutoBuild = _autoBuild;
             }
 
             /// Is this a closed path?  <see cref="Build"/> is called on change.
@@ -605,7 +550,8 @@ public static partial class ioDriver
                 {
                     if (m_Closed == value) return;
                     m_Closed = value;
-                    Build();
+                    BuildFrame();
+                    IBuild();
                 }
             }
 
@@ -646,7 +592,7 @@ public static partial class ioDriver
                 get { return m_FrameSegments.ToArray(); }
             }
 
-            /// Get frame segment that lies at specified frame pct. <seealso cref="GetPathSegmentAt"/>
+            /// Get a copy of the frame segment that lies at specified frame pct. <seealso cref="GetPathSegmentAt"/>
             public Segment GetFrameSegmentAt(float _pct)
             {
                 if (_pct < 0f || _pct > 1f)
@@ -654,16 +600,16 @@ public static partial class ioDriver
                     Log.Err("_pct must be between 0 and 1.  Returning null.");
                     return null;
                 }
-                if (_pct == 0) return FrameSegments[0];
-                if (_pct == 1) return FrameSegments[FrameSegments.Length - 1];
+                if (_pct == 0) return new Segment(FrameSegments[0]);
+                if (_pct == 1) return new Segment(FrameSegments[FrameSegments.Length - 1]);
 
                 foreach (Segment seg in FrameSegments)
                     if (seg.PctEnd > _pct)
-                        return seg;
-                return FrameSegments[FrameSegments.Length - 1];
+                        return new Segment(seg);
+                return new Segment(FrameSegments[FrameSegments.Length - 1]);
             }
 
-            /// Get path segment that lies at specified path pct. <seealso cref="GetFrameSegmentAt"/>
+            /// Get a copy of the path segment that lies at specified path pct. <seealso cref="GetFrameSegmentAt"/>
             public Segment GetPathSegmentAt(float _pct)
             {
                 if (_pct < 0f || _pct > 1f)
@@ -671,13 +617,13 @@ public static partial class ioDriver
                     Log.Err("_pct out of range.  Must be between 0 and 1f.  Returning null.");
                     return null;
                 }
-                if (_pct == 0) return PathSegments[0];
-                if (_pct == 1) return PathSegments[PathSegments.Length - 1];
+                if (_pct == 0) return new Segment(PathSegments[0]);
+                if (_pct == 1) return new Segment(PathSegments[PathSegments.Length - 1]);
 
                 foreach (Segment seg in PathSegments)
                     if (seg.PctEnd > _pct)
-                        return seg;
-                return PathSegments[PathSegments.Length - 1];
+                        return new Segment(seg);
+                return new Segment(PathSegments[PathSegments.Length - 1]);
             }
 
             /// Get percent along frame for specified frame waypoint
@@ -741,28 +687,28 @@ public static partial class ioDriver
             public virtual void AddFrameWaypoint(T _waypoint)
             {
                 m_FrameWaypoints.Add(_waypoint);
-                Build();
+                BuildFrame();
             }
 
             /// Insert new frame waypoint at specified index.
             public virtual void InsertFrameWaypoint(int _index, T _waypoint)
             {
                 m_FrameWaypoints.Insert(_index, _waypoint);
-                Build();
+                BuildFrame();
             }
 
             /// Replace the data at index with specified data.
             public virtual void UpdateFrameWaypoint(int _index, T _waypoint)
             {
                 m_FrameWaypoints[_index] = _waypoint;
-                Build();
+                BuildFrame();
             }
 
             /// Remove frame waypoint at specified index.
             public virtual void RemoveFrameWaypoint(int _index)
             {
                 m_FrameWaypoints.RemoveAt(_index);
-                Build();
+                BuildFrame();
             }
 
             /// Get an array of this path's frame waypoints.
@@ -780,7 +726,7 @@ public static partial class ioDriver
                 for (int idx = 0; idx < m_FrameWaypoints.Count; ++idx)
                     m_FrameWaypoints[idx] = (ToVecN(m_FrameWaypoints[idx]) + ToVecN(_offset)).To<T>();
 
-                Build();
+                IBuild();
             }
 
 
@@ -835,6 +781,19 @@ public static partial class ioDriver
                 return LerpPath(_pct, m_FrameWaypoints, m_FrameSegments, FrameLength, m_Closed);
             }
 
+            protected void IBuild()
+            {
+                if (AutoBuild)
+                    Build();
+                else
+                    IsValid = false;
+            }
+
+            /// Calculate path data, populate <see cref="PathPoints"/> and <see cref="PathSegments"/>
+            public void Build()
+            {
+                IsValid = BuildPath();
+            }
 
             private void BuildFrame()
             {
@@ -860,37 +819,14 @@ public static partial class ioDriver
                     cumLen += lengths[idx];
                     m_FrameSegments.Add(new Segment(idx, startLen / totLen, cumLen / totLen, lengths[idx]));
                 }
-            }
 
-            /// Updates frame segment data.  Makes call to abstract <see cref="UpdatePath"/>
-            public void Build()
-            {
-
-                //TODO make protected when static factory is fixed
-
-                BuildFrame();
-                DoBuildPath();
-
+                IBuild();
             }
 
             /// Override to update <see cref="PathPoints"/> and <see cref="PathSegments"/> here.
-            /// This function is iterated until done or until time out.
-            protected abstract IEnumerator BuildPath();
+            /// This function is iterated until done or until time out. TODO add doc for TimeOut
+            protected abstract bool BuildPath();
 
-            protected void DoBuildPath()
-            {
-                var startTicks = System.DateTime.Now.Ticks;
-                while (BuildPath().MoveNext())
-                {
-                    Log.Info("Out Iteration");
-                    var curTime = (System.DateTime.Now.Ticks - startTicks) / System.TimeSpan.TicksPerMillisecond;
-                    if (curTime >= TimeOut)
-                    {
-                        Log.Err("Time out on BuildPath");
-                        break;
-                    }
-                }
-            }
 
             /// Object representing segment between two points on a <see cref="Base{T}"/>.
             /// Convenience data carrier.
@@ -1018,8 +954,8 @@ public static partial class ioDriver
             /// Constructor.  Note <see cref="Base{T}.Build"/> is not called during construction.
             /// <seealso cref="Base{T}(System.Collections.Generic.List{T},bool)"/>
             /// </summary>
-            protected Spline(List<T> _frameWaypoints, bool _closed)
-                : base(_frameWaypoints, _closed)
+            protected Spline(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
+                : base(_frameWaypoints, _closed, _autoBuild)
             {
                 m_DimsToSpline = CheckDims(null);
                 m_SegmentLength = GetDefaultSegmentLength();
@@ -1044,7 +980,8 @@ public static partial class ioDriver
                     }
                     else
                         m_SegmentLength = value;
-                    DoBuildPath();
+                    if (AutoBuild)
+                        BuildPath();
                 }
             }
 
@@ -1063,10 +1000,9 @@ public static partial class ioDriver
                         val = 0.25f;
                         Log.Err("Segment accuracy cannot be less than zero and must be less than 1.  Setting to '" + val + "'");
                     }
-                    bool update = val < m_SegmentAccuracy;
                     m_SegmentAccuracy = val;
-                    if (update)
-                        DoBuildPath();
+                    if (AutoBuild)
+                        BuildPath();
                 }
 
             }
@@ -1081,7 +1017,8 @@ public static partial class ioDriver
                     var dimsToSpline = CheckDims(value);
                     if (dimsToSpline == m_DimsToSpline) return;
                     m_DimsToSpline = dimsToSpline;
-                    DoBuildPath();
+                    if (AutoBuild)
+                        BuildPath();
                 }
             }
 
@@ -1100,89 +1037,105 @@ public static partial class ioDriver
                 return FrameLength / 10f;
             }
 
+
+
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
             /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
-            protected override IEnumerator BuildPath()
+            protected override bool BuildPath()
             {
+                var timeStamp = System.DateTime.UtcNow.Ticks;
 
                 if (m_SegmentLength <= 0)
-                    m_SegmentLength = 0.1f;
+                    m_SegmentLength = GetDefaultSegmentLength();
                 if (m_SegmentAccuracy <= 0 || m_SegmentAccuracy >= 1f)
                     m_SegmentAccuracy = 0.3f;
 
-                float allowedError = m_SegmentLength * m_SegmentAccuracy;
+                var tgtLenMin = m_SegmentLength - m_SegmentLength * m_SegmentAccuracy;
+                var tgtLenMax = m_SegmentLength + m_SegmentLength * m_SegmentAccuracy;
+                var guessPct = m_SegmentLength / FrameLength;
 
-                float estLen = FrameLength;
-
-                float toCheckPct = m_SegmentLength / estLen;
-                float fromCheckPct = 0;
-
-                bool done = false;
-                var min = m_SegmentLength - allowedError;
-                var max = m_SegmentLength + allowedError;
-                var lenA = -1f;
-                var lenB = -1f;
-                var pctA = -1f;
-                var pctB = -1f;
-                var path = new List<T> { m_FrameWaypoints[0] };
+                var fromPt = m_FrameWaypoints[0];
+                var endPt = SplineValueAt(1f);
+                var path = new List<T> { fromPt };
                 var totalLength = 0f;
                 var lengths = new List<float>();
 
-                var iterCountTgt = 50;
-                var iterCount = 0;
+
+
+                var fromPct = 0f;
+
+                var iters = 0;
+
+                var done = false;
+                float len;
                 while (!done)
                 {
-                    var pctSpan = toCheckPct - fromCheckPct;
-                    var len = DTypeInfo<T>.Length(SplineValueAt(fromCheckPct), SplineValueAt(toCheckPct));
 
-                    if (toCheckPct >= 1f && len <= max)
+                    var wrapped = false;
+                    var pctA = fromPct;
+                    var pctB = float.MaxValue;
+                    var curPct = fromPct + guessPct;
+
+                    if (curPct >= 1f)
                     {
-
-                        toCheckPct = 1f;
-                        done = true;
-
-                    }
-                    else if (len > max)
-                    {
-                        lenB = len;
-                        pctB = toCheckPct;
-                        if (lenA != -1)
+                        curPct = 1f;
+                        var checkLen = GetLengthBeetween(fromPt, endPt);
+                        if (checkLen <= tgtLenMin)
                         {
-                            toCheckPct = pctA + (pctB - pctA) / 2;
-                            continue;
+                            done = true;
+                            len = checkLen;
                         }
-                        toCheckPct = fromCheckPct + pctSpan * m_SegmentLength / len;
-                        continue;
+                        else
+                            len = GetLengthByPct(pctA, curPct);
                     }
-                    else if (len < min)
-                    {
-                        lenA = len;
-                        pctA = toCheckPct;
-                        if (lenB != -1)
-                        {
-                            toCheckPct = pctA + (pctB - pctA) / 2;
-                            continue;
-                        }
-                        toCheckPct = fromCheckPct + pctSpan * m_SegmentLength / len;
-                        continue;
+                    else
+                        len = GetLengthByPct(pctA, curPct);
 
+
+
+                    while (!done)
+                    {
+
+                        if (len > tgtLenMin && len <= tgtLenMax)
+                            break;
+
+                        if (len < tgtLenMin && curPct > pctA)
+                        {
+                            pctA = curPct;
+                            if (!wrapped)
+                                curPct += guessPct;
+                            else
+                                curPct = pctA + (pctB - pctA) / 2f;
+                        }
+                        else if (len > tgtLenMax && curPct <= pctB)
+                        {
+                            wrapped = true;
+                            pctB = curPct;
+                            curPct = pctA + (pctB - pctA) / 2f;
+                        }
+
+                        if (pctA > 1f)
+                        {
+                            done = true;
+                            curPct = 1f;
+                        }
+                        len = GetLengthByPct(fromPct, curPct);
+                        var curTicks = DateTime.UtcNow.Ticks - timeStamp;
+                        if (curTicks / System.TimeSpan.TicksPerMillisecond > TimeOut)
+                        {
+                            Log.Err("Timeout building path.  Timeout = " + TimeOut + " ms");
+                            return false;
+                        }
                     }
-                    lenA = lenB = pctA = pctB = -1f;
-                    totalLength += len;
+
+                    var pt = SplineValueAt(curPct);
+                    path.Add(pt);
                     lengths.Add(len);
-                    path.Add(SplineValueAt(toCheckPct));
+                    totalLength += len;
+                    fromPct = curPct;
+                    fromPt = pt;
 
-                    if (++iterCount >= iterCountTgt)
-                    {
-                        iterCount = 0;
-                        yield return false;
-                    }
 
-                    if (done)
-                        break;
-                    var nextPctAdder = toCheckPct - fromCheckPct;
-                    fromCheckPct = toCheckPct;
-                    toCheckPct = fromCheckPct + nextPctAdder;
                 }
 
                 if (path.Count < 2)
@@ -1203,8 +1156,20 @@ public static partial class ioDriver
                     var toPct = progressLen / totalLength;
                     m_PathSegments.Add(new Segment(idx, frmPct, toPct, lengths[idx]));
                 }
-                yield break;
+                return true;
             }
+
+            private float GetLengthByPct(float _fromPct, float _toPct)
+            {
+                return DTypeInfo<T>.Length(SplineValueAt(_fromPct), SplineValueAt(_toPct));
+            }
+
+            private float GetLengthBeetween(T _from, T _to)
+            {
+                return DTypeInfo<T>.Length(_from, _to);
+            }
+
+
 
             /// <summary>
             /// Get the percentage at which the specified frame waypoint lies along the spline.
@@ -1283,10 +1248,11 @@ public static partial class ioDriver
             /// <seealso cref="CreateBezier{T}(bool,T[])"/>
             /// <seealso cref="CreateBezier{T}(Base{T})"/>
             /// </summary>
-            public Bezier(List<T> _frameWaypoints, bool _closed)
-                : base(_frameWaypoints, _closed)
+            public Bezier(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
+                : base(_frameWaypoints, _closed, _autoBuild)
             {
                 m_Control = CreateDefaultCtl();
+
             }
 
             //TODO fix when static factory bug is fixed (mono/unity)
@@ -1347,10 +1313,7 @@ public static partial class ioDriver
                 if (_pct <= 0f)
                     return m_FrameWaypoints[0];
                 if (_pct >= 1f)
-                    if (Closed)
-                        return m_FrameWaypoints[0];
-                    else
-                        return m_FrameWaypoints[m_FrameWaypoints.Count - 1];
+                    return Closed ? m_FrameWaypoints[0] : m_FrameWaypoints[m_FrameWaypoints.Count - 1];
 
                 int idxB = 0;
 
@@ -1424,7 +1387,7 @@ public static partial class ioDriver
             /// Creates colinear control with magnitude based on neighboring waypoint data.
             /// <param name="_parent">Bezier object to create control data for</param>
             /// <returns>List of control objects</returns>
-            public Control[] CreateDefaultCtl()
+            private Control[] CreateDefaultCtl()
             {
                 var control = new List<Control>();
                 for (int idx = 0; idx < m_FrameWaypoints.Count; ++idx)
@@ -1454,7 +1417,7 @@ public static partial class ioDriver
                 for (int idx = 0; idx < _newControl.Length; ++idx)
                     m_Control[idx] = _newControl[idx];
 
-                DoBuildPath();
+                IBuild();
             }
 
             public void SetControl(int _wayptIdx, Control _control)
@@ -1466,12 +1429,13 @@ public static partial class ioDriver
                 }
 
                 m_Control[_wayptIdx] = _control;
-                DoBuildPath();
+
+                IBuild();
             }
 
             public void SetControlOutPt(int _wayptIdx, T _outPt)
             {
-                if (_wayptIdx <= 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                if (_wayptIdx < 0 || _wayptIdx >= m_FrameWaypoints.Count)
                 {
                     Log.Err("SetControlOutPt : Waypoint index out of range.  Got " + _wayptIdx);
                     return;
@@ -1482,12 +1446,13 @@ public static partial class ioDriver
                 var newVec = (outPt - wayPt);
                 if (ToVecN(cntl.OutVec) == newVec) return;
                 cntl.OutVec = newVec.To<T>();
-                DoBuildPath();
+
+                IBuild();
             }
 
             public void SetControlInPt(int _wayptIdx, T _inPt)
             {
-                if (_wayptIdx <= 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                if (_wayptIdx < 0 || _wayptIdx >= m_FrameWaypoints.Count)
                 {
                     Log.Err("SetControlInPt : Waypoint index out of range.  Got " + _wayptIdx);
                     return;
@@ -1498,7 +1463,8 @@ public static partial class ioDriver
                 var newVec = (inPt - wayPt);
                 if (newVec == ToVecN(cntl.InVec)) return;
                 cntl.InVec = newVec.To<T>();
-                DoBuildPath();
+
+                IBuild();
             }
 
 
@@ -1653,8 +1619,8 @@ public static partial class ioDriver
             /// <seealso cref="CreateCubic{T}(bool, T[])"/>
             /// <seealso cref="CreateCubic{T}(Base{T})"/>
             /// </summary>
-            public Cubic(List<T> _frameWaypoints, bool _closed)
-                : base(_frameWaypoints, _closed)
+            public Cubic(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
+                : base(_frameWaypoints, _closed, _autoBuild)
             {
             }
 
@@ -1674,7 +1640,7 @@ public static partial class ioDriver
             }*/
 
             /// Updates cubic values then calls base spline <see cref="Spline{T}.UpdatePath"/>
-            protected override IEnumerator BuildPath()
+            protected override bool BuildPath()
             {
                 m_Cubs = new CubicValue[DTypeInfo<T>.DimCount][];
                 foreach (var dim in m_DimsToSpline)
@@ -1873,8 +1839,8 @@ public static partial class ioDriver
             /// <seealso cref="CreateLinear{T}(bool,T[])"/>
             /// <seealso cref="CreateLinear{T}(Base{T})"/>
             /// </summary>
-            public Linear(List<T> _waypoints, bool _closed)
-                : base(_waypoints, _closed)
+            public Linear(IEnumerable<T> _waypoints, bool _closed, bool _autoBuild)
+                : base(_waypoints, _closed, _autoBuild)
             {
             }
 
@@ -1894,14 +1860,14 @@ public static partial class ioDriver
             }*/
 
             /// Builds PathPoints and PathSegments
-            protected override IEnumerator BuildPath()
+            protected override bool BuildPath()
             {
                 var points = new List<T>(m_FrameWaypoints);
                 if (Closed)
                     points.Add(m_FrameWaypoints[0]);
                 PathPoints = points.ToArray();
                 m_PathSegments = m_FrameSegments;
-                yield break;
+                return true;
             }
         }
 

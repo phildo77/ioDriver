@@ -1,23 +1,31 @@
 ﻿using System.Collections.Generic;
+using System.Diagnostics;
 
 public static partial class ioDriver
 {
     public static class Profile
     {
-        private static Stack<Tuple<string,long>> m_ProStack = new Stack<Tuple<string, long>>();
+        private static Stack<Tuple<string, Stopwatch>> m_ProStack = new Stack<Tuple<string, Stopwatch>>();
  
         public static void Begin(string _label)
         {
-            m_ProStack.Push(new Tuple<string, long>(_label,System.DateTime.Now.Ticks));
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+            m_ProStack.Push(new Tuple<string, Stopwatch>(_label, watch));
         }
 
         public static void End()
         {
             var last = m_ProStack.Pop();
-            var deltaTicks = System.DateTime.Now.Ticks - last.Second;
-            var deltaMillisecs = (double)deltaTicks/System.TimeSpan.TicksPerMillisecond;
+            last.Second.Stop();
+            var ticks = last.Second.ElapsedTicks;
+            var freq = Stopwatch.Frequency;
+            var isHR = Stopwatch.IsHighResolution;
 
-            Log.Info(last.First + " : " + deltaMillisecs + " ms");
+            var ms = (decimal)ticks/freq * 1000;
+
+            Log.Info(last.First + " : " + ms.ToString("0.######") + " ms --- Ticks: " + ticks + "  ---- isHR : " + isHR);
         }
     }
 }
+
