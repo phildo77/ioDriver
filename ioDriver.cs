@@ -499,9 +499,6 @@ public static partial class ioDriver
     /// Initialize ioDriver.  Called in static constructor.
     public static void Init()
     {
-
-
-
         if (InitDone) return;
         InitDone = true;
 

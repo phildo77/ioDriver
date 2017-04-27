@@ -501,6 +501,8 @@ public static partial class ioDriver
                 protected set;
             }
 
+            protected VecN[] PathPointsVN;
+
             /// List of segments in path.
             protected List<Segment> m_PathSegments;
 
@@ -656,14 +658,15 @@ public static partial class ioDriver
                 Segment closestSeg = null;
                 VecN pointOnLine = null;
                 var segs = PathSegments;
+                var pts = PathPoints;
 
                 for (int idx = 0; idx < segs.Length; ++idx)
                 {
                     var curSeg = segs[idx];
-                    var segPtA = ToVecN(PathPoints[curSeg.FromIdx]);
-                    var segPtB = ToVecN(PathPoints[curSeg.FromIdx + 1]);
+                    var segPtA = ToVecN(pts[curSeg.FromIdx]);
+                    var segPtB = ToVecN(pts[curSeg.FromIdx + 1]);
                     VecN curPtOnLine = null;
-                    var curDist = VecN.PointToLineDistance(segPtA, segPtB, ToVecN(_point), out curPtOnLine);
+                    var curDist = VecN.PointToLineDistanceSquared(segPtA, segPtB, ToVecN(_point), out curPtOnLine);
                     if (curDist < closestDist)
                     {
                         closestDist = curDist;
@@ -674,7 +677,7 @@ public static partial class ioDriver
 
                 var nearestOnPath = pointOnLine.To<T>();
                 _nearestSegment = closestSeg;
-                var pctInSeg = VecN.ILerp(ToVecN(PathPoints[closestSeg.FromIdx]), ToVecN(PathPoints[closestSeg.FromIdx + 1]),
+                var pctInSeg = VecN.ILerp(ToVecN(pts[closestSeg.FromIdx]), ToVecN(pts[closestSeg.FromIdx + 1]),
                     ToVecN(nearestOnPath));
 
                 _pctOnPath = Teacher.Lerpf(_nearestSegment.PctStart, _nearestSegment.PctEnd, pctInSeg);
@@ -1914,11 +1917,19 @@ public static partial class ioDriver
         {
             get
             {
+                return (float)Math.Sqrt(MagnitudeSquared);
+            }
+        }
+
+        public float MagnitudeSquared
+        {
+            get
+            {
                 float sqrDist = 0;
                 for (int idx = 0; idx < DimCount; ++idx)
                     sqrDist += Vals[idx] * Vals[idx];
 
-                return (float)Math.Sqrt(sqrDist);
+                return (float)sqrDist;
             }
         }
 
@@ -2111,13 +2122,18 @@ public static partial class ioDriver
 
         public static float PointToLineDistance(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
         {
+            return (float)Math.Sqrt(PointToLineDistanceSquared(_linePtA, _linePtB, _point, out _pointOnLine));
+        }
+
+        public static float PointToLineDistanceSquared(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
+        {
             var line = _linePtB - _linePtA;
             var lineMag = line.Magnitude;
             var lambda = VecN.Dot((_point - _linePtA), line) / lineMag;
             lambda = Math.Min(Math.Max(0f, lambda), lineMag);
             var p = line * lambda * (1 / lineMag);
             _pointOnLine = _linePtA + p;
-            return (_linePtA + p - _point).Magnitude;
+            return (_linePtA + p - _point).MagnitudeSquared;
         }
 
         public static VecN NearestPointOnLine(VecN _linePtA, VecN _linePtB, VecN _point)

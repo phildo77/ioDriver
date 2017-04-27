@@ -250,6 +250,7 @@ namespace ioDriverUnity
         #endregion Methods
     }
 
+
     /// <summary>
     /// Automatically generated MonoBehaviour that provides the "Pump" for the driver manager to update running drivers.
     /// </summary>
@@ -266,7 +267,6 @@ namespace ioDriverUnity
 
 
         private static ioDriverUnityManager m_Instance;
-        private static object _lock = new object();
 
         private bool m_Enabled;
 
@@ -293,40 +293,30 @@ namespace ioDriverUnity
         {
             get
             {
-                /* TODO too many inits in editor.  Why is this here?
-                if (!UnityEngine.Application.isPlaying)
-                {
-                    ioDriver.Reset();
+                if (applicationIsQuitting) 
                     return null;
-                }*/
-                if (applicationIsQuitting)
-                {
-                    return null;
-                }
 
-                lock (_lock)
+                if (m_Instance == null)
                 {
-                    if (m_Instance == null)
+                    m_Instance = (ioDriverUnityManager)FindObjectOfType(typeof(ioDriverUnityManager));
+
+                    if (FindObjectsOfType(typeof(ioDriverUnityManager)).Length > 1)
                     {
-                        m_Instance = (ioDriverUnityManager)FindObjectOfType(typeof(ioDriverUnityManager));
-
-                        if (FindObjectsOfType(typeof(ioDriverUnityManager)).Length > 1)
-                        {
-                            Debug.LogError("[ioDriverUnityManager] Something went really wrong " +
-                                " - there should never be more than 1 ioDriverUnityManager!" +
-                                " Reopenning the scene might fix it.");
-                            return m_Instance;
-                        }
-
-                        if (m_Instance == null)
-                        {
-                            GameObject umGO = new GameObject("ioDriverUnityManager");
-                            m_Instance = umGO.AddComponent<ioDriverUnityManager>();
-                        }
+                        Debug.LogError("[ioDriverUnityManager] Something went really wrong " +
+                            " - there should never be more than 1 ioDriverUnityManager!" +
+                            " Reopenning the scene might fix it.");
+                        return m_Instance;
                     }
 
-                    return m_Instance;
+                    if (m_Instance == null)
+                    {
+                        GameObject umGO = new GameObject("ioDriverUnityManager");
+                        m_Instance = umGO.AddComponent<ioDriverUnityManager>();
+                        umGO.hideFlags = HideFlags.DontSaveInBuild | HideFlags.DontSaveInEditor;
+                    }
                 }
+
+                return m_Instance;
             }
         }
 
@@ -338,7 +328,8 @@ namespace ioDriverUnity
         {
             ioDriver.TimescaleGlobal = UnityEngine.Time.timeScale;
             TeachUnity();
-            Enabled = true;
+            if(Application.isPlaying)
+                Enabled = true;
         }
 
         void OnApplicationQuit()
@@ -643,12 +634,12 @@ namespace ioDriverUnity
 
 public static partial class ioDriver
 {
-    public static DTweenPath<Vector3> TweenWorld(GameObject _go, Path.Base<Vector3> _path, float _duration, string _name = null)
+    public static DTweenPath<Vector3> ioTween(GameObject _go, Path.Base<Vector3> _path, float _duration, string _name = null)
     {
         return Tween(() => _go.transform.position, _path, _duration, _name);
     }
 
-    public static DTweenPath<Vector3> TweenWorld(Transform _xfrm, Path.Base<Vector3> _path, float _duration,
+    public static DTweenPath<Vector3> ioTween(Transform _xfrm, Path.Base<Vector3> _path, float _duration,
         string _name = null)
     {
         return Tween(() => _xfrm.position, _path, _duration, _name);
