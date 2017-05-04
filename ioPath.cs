@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 
 
@@ -952,6 +953,38 @@ public static partial class ioDriver
             /// Backing field for <see cref="SegmentAccuracy"/>
             private float m_SegmentAccuracy;
 
+            private float m_PruneAngle;
+
+            private bool m_Prune;
+
+            public float PruneAngle
+            {
+                get { return m_PruneAngle; }
+                set
+                {
+                    if (value <= 0 || value >= 180)
+                    {
+                        Log.Err("Prune Angle must be between 0 and 180 degrees.  Setting Prune Angle to 90 Degrees.");
+                        m_PruneAngle = 90f;
+                    }
+                    if (m_PruneAngle == value) return;
+                    m_PruneAngle = value;
+                    if (AutoBuild)
+                        BuildPath();
+                }
+            }
+
+            public bool Prune
+            {
+                get { return m_Prune; }
+                set
+                {
+                    if (m_Prune == value) return;
+                    m_Prune = value;
+                    if (AutoBuild)
+                        BuildPath();
+                }
+            }
 
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build"/> is not called during construction.
@@ -1039,8 +1072,6 @@ public static partial class ioDriver
             {
                 return FrameLength / 10f;
             }
-
-
 
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
             /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
@@ -1132,13 +1163,20 @@ public static partial class ioDriver
                     }
 
                     var pt = SplineValueAt(curPct);
+
                     path.Add(pt);
                     lengths.Add(len);
                     totalLength += len;
                     fromPct = curPct;
                     fromPt = pt;
+                }
 
-
+                if (Prune)
+                {
+                    Segment[] segs;
+                    PathPoints = PrunedPoints(PruneAngle, out segs);
+                    m_PathSegments = segs.ToList();
+                    return true;
                 }
 
                 if (path.Count < 2)
@@ -1173,6 +1211,109 @@ public static partial class ioDriver
             }
 
 
+            public T[] PrunedPoints(float _pruneAngle)
+            {
+                Segment[] unused;
+                return PrunedPoints(_pruneAngle, out unused);
+            }
+            public T[] PrunedPoints(float _pruneAngle, out Segment[] _segments)
+            {
+                if (_pruneAngle < 0 || _pruneAngle > 180)
+                {
+                    Log.Err("PrunedPoints : _pruneAngle must be between 0 and 180 degrees.");
+                    _segments = new Segment[0];
+                    return new T[0];
+                }
+
+                var ptCnt = PathPoints.Length;
+                var prune = false;
+                //Check forward path
+                var newPoints = new List<Tuple<bool, VecN>>() { new Tuple<bool, VecN>(false, ToVecN(PathPoints[0])) };
+                var lastPtN = ToVecN(PathPoints[0]);
+                var lastVecN = ToVecN(PathPoints[1]) - lastPtN;
+                for (int idx = 1; idx < ptCnt - 1; ++idx)
+                {
+                    var curPtN = ToVecN(PathPoints[idx]);
+                    var curVecN = curPtN - lastPtN;
+                    var curAngle = ioMath.ToDegrees(VecN.Angle(lastVecN, curVecN));
+
+                    prune = curAngle < _pruneAngle;
+                    if (!prune)
+                    {
+                        lastVecN = curVecN;
+                        lastPtN = curPtN;
+                    }
+                    newPoints.Add(new Tuple<bool, VecN>(prune, curPtN));
+                }
+                newPoints.Add(new Tuple<bool, VecN>(false, ToVecN(PathPoints[PathPoints.Length - 1])));
+
+                //Check backward
+                var totalLen = 0f;
+                var lengths = new List<float>();
+
+                lastPtN = newPoints[ptCnt - 1].Second;
+                lastVecN = newPoints[ptCnt - 2].Second - lastPtN;
+                for (int idx = ptCnt - 2; idx >= 0; --idx)
+                {
+                    if (newPoints[idx].First)
+                    {
+                        var curPtN = newPoints[idx].Second;
+                        var curVecN = curPtN - lastPtN;
+                        var curAngleRad = VecN.Angle(lastVecN, curVecN);
+                        var curAngle = ioMath.ToDegrees(curAngleRad);
+
+                        prune = curAngle < _pruneAngle;
+                        if (!prune)
+                        {
+                            newPoints[idx] = new Tuple<bool, VecN>(false, newPoints[idx].Second);
+                        }
+                    }
+
+                    if (!newPoints[idx].First)
+                    {
+                        lastVecN = newPoints[idx].Second - lastPtN;
+                        var len = lastVecN.Magnitude;
+                        totalLen += len;
+                        lengths.Insert(0, len);
+                        lastPtN = newPoints[idx].Second;
+                    }
+
+                }
+
+
+                //Refresh segments
+
+
+                var prunedPoints = newPoints.Where(_pt => !_pt.First).Select(_pt => _pt.Second.To<T>()).ToArray();
+
+                //Update Segment pct
+                var progressLen = 0f;
+                var segs = new List<Segment>();
+                var sb = new StringBuilder();
+                for (int idx = 0; idx < prunedPoints.Length - 1; ++idx)
+                {
+                    var frmPct = progressLen / totalLen;
+                    progressLen += lengths[idx];
+                    var toPct = progressLen / totalLen;
+                    segs.Add(new Segment(idx, frmPct, toPct, lengths[idx]));
+
+                    if (idx < prunedPoints.Length - 1 && idx > 0)
+                    {
+                        var vecA = ToVecN(prunedPoints[idx + 1]) - ToVecN(prunedPoints[idx]);
+                        var vecB = ToVecN(prunedPoints[idx]) - ToVecN(prunedPoints[idx - 1]);
+                        var angle = ioMath.ToDegrees(VecN.Angle(vecB, vecA));
+                        sb.AppendLine(idx + " to " + (idx + 1) + " = " + angle);
+                    }
+                }
+                sb.AppendLine("PruneAnlge = " + _pruneAngle);
+                Log.Info(sb.ToString());
+                _segments = segs.ToArray();
+
+
+
+                Log.Err("Prune Done");
+                return prunedPoints;
+            }
 
             /// <summary>
             /// Get the percentage at which the specified frame waypoint lies along the spline.
@@ -2038,6 +2179,18 @@ public static partial class ioDriver
             for (int idx = 0; idx < dimCount; ++idx)
                 tVal += _a.Vals[idx] * _b.Vals[idx];
             return tVal;
+        }
+
+        public static float Angle(VecN _a, VecN _b)
+        {
+            var dot = Dot(_a, _b);
+            var magA = _a.Magnitude;
+            var magB = _b.Magnitude;
+            var dotMag = dot / (magA * magB);
+            if (dotMag > 1d) return (float)Math.Acos(1d);
+            if (dotMag < -1d) return (float)Math.Acos(-1d);
+            var rslt = Math.Acos(dotMag);
+            return (float)rslt;
         }
 
         /// Vector equality with precision
