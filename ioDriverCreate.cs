@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 public static partial class ioDriver
 {
-    
+
     /// Shorthand base constructor. <seealso cref="DBase"/>
     public static DBase Base(string _name = null)
     {
@@ -53,13 +53,13 @@ public static partial class ioDriver
     {
         return new DStep<TTar>(_targetExp, _dynStartVal, _dynStepRate, _name);
     }
-    
+
 
     /// Shorthand tween constructor.  <seealso cref="DTweenSimple{TTar}" />
     public static DTweenSimple<TTar> Tween<TTar>(Action<TTar> _targetAction, TTar _from, TTar _to, float _cycleDuration, string _name = null)
     {
         return new DTweenSimple<TTar>(_targetAction, _from, _to, _cycleDuration, _name);
-        
+
     }
 
     /// Shorthand tween constructor.  <seealso cref="DTweenSimple{TTar}"/>
@@ -239,7 +239,7 @@ public static partial class ioDriver
 /// Convenience methods for building drivers / driver config.
 public static class ioDriverFluency //TODO cleanup/split
 {
-    
+
 
     #region DTransfer Fluency
     /// Fluency method. See <see cref="ioDriver.DBase.Name"/>
@@ -302,7 +302,7 @@ public static class ioDriverFluency //TODO cleanup/split
     /// Fluency method. Creates new TargetInfo object with the specified _targetObject for this driver.  See <see cref="ioDriver.DBase.TargetInfo"/>
     public static T SetTargetObject<T>(this T _thisDriver, object _targetObject) where T : ioDriver.DBase
     {
-        _thisDriver.TargetInfo = new ioDriver.TargetInfo(_targetObject.ToString(),_targetObject);
+        _thisDriver.TargetInfo = new ioDriver.TargetInfo(_targetObject.ToString(), _targetObject);
         return _thisDriver;
     }
 
@@ -333,7 +333,7 @@ public static class ioDriverFluency //TODO cleanup/split
         _thisDriver.DebugEnable = _debug;
         return _thisDriver;
     }
-    
+
     /// Start driver.
     public static T Go<T>(this T _thisDriver) where T : ioDriver.DBase
     {
@@ -356,7 +356,7 @@ public static class ioDriverFluency //TODO cleanup/split
         _thisDriver.EaseCustom(_customEaseTypeKey);
         return _thisDriver;
     }
-    
+
     /// Fluency method. See <see cref="ioDriver.DMapped{TTar,TDri}.ClampDrive"/>
     public static T SetClampPctDrive<T>(this T _thisDriver, float _clampMinPct, float _clampMaxPct) where T : ioDriver.IDMapped
     {
@@ -395,8 +395,8 @@ public static class ioDriverFluency //TODO cleanup/split
     }
 
     #endregion
-    
-    
+
+
     /// Fluency Method.  <see cref="ioDriver.Path.Base{T}.Closed"/>
     public static T SetClosed<T>(this T _path, bool _closed) where T : ioDriver.IPath
     {
@@ -563,7 +563,27 @@ public static class ioDriverFluency //TODO cleanup/split
         _spline.SegmentAccuracy = _accuracy;
         return _spline;
     }
-    
+
+    /// Fluency Method.  See <see cref="ioDriver.Path.Spline{T}.PointMode"/>
+    public static T SetPointMode<T>(this T _spline, ioDriver.Path.SplinePointMode _pointMode)
+        where T : ioDriver.ISpline
+    {
+        _spline.PointMode = _pointMode;
+        return _spline;
+    }
+
+    public static T SetMinAngle<T>(this T _spline, float _minAngle) where T : ioDriver.ISpline
+    {
+        _spline.MinAngle = _minAngle;
+        return _spline;
+    }
+
+    public static T SetMinAngleSamples<T>(this T _spline, int _samples) where T : ioDriver.ISpline
+    {
+        _spline.MinAngleSamples = _samples;
+        return _spline;
+    }
+
     /// Fluency Method. See <see cref="ioDriver.Path.Spline{T}.DimsToSpline"/>
     public static T SetDimsToSpline<T>(this T _spline, params int[] _dimsToSpline)
         where T : ioDriver.ISpline
