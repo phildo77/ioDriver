@@ -578,9 +578,9 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
-    public static T SetMinAngleSamples<T>(this T _spline, int _samples) where T : ioDriver.ISpline
+    public static T SetMinAngleMinLength<T>(this T _spline, float _length) where T : ioDriver.ISpline
     {
-        _spline.MinAngleSamples = _samples;
+        _spline.MinAngleMinLength = _length;
         return _spline;
     }
 
