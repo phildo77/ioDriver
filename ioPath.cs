@@ -1041,13 +1041,18 @@ public static partial class ioDriver
                 get { return m_MinAngleMinLength; }
                 set
                 {
-                    if (value < 0 && value != MA_LENGTH_AUTO)
+                    if (value <= 0 && value != MA_LENGTH_AUTO)
                     {
-                        Log.Err("Min Angle Min length must be equal to or greater than zero.  Setting to Zero");
-                        m_MinAngleMinLength = 0;
+                        m_MinAngleMinLength = GetDefaultMinAngleMinLength();
+                        Log.Err("Min Angle Min length must greater than zero.  Setting to " + m_MinAngleMinLength);
+
                     }
-                    if (m_MinAngleMinLength == value) return;
-                    m_MinAngleMinLength = value;
+                    else
+                    {
+                        if (m_MinAngleMinLength == value) return;
+                        m_MinAngleMinLength = value;
+                    }
+
                     if (PointMode == SplinePointMode.MinAngle)
                         IBuild(false);
                 }
@@ -1139,6 +1144,11 @@ public static partial class ioDriver
             public float GetDefaultSegmentLength()
             {
                 return FrameLength / 10f;
+            }
+
+            public float GetDefaultMinAngleMinLength()
+            {
+                return SplineLengthEstimated() / (float)1000;
             }
 
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
@@ -1360,7 +1370,7 @@ public static partial class ioDriver
                      * */
 
                     Profile.Begin("Build Min Angle");
-                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? SplineLengthEstimated() / (float)1000 : m_MinAngleMinLength;
+                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? GetDefaultMinAngleMinLength() : m_MinAngleMinLength;
                     var ptsN = new List<VecN> { m_FrameVN[0] };
                     var pctList = new List<float> { 0f };
                     for (int idx = 1; idx < m_FrameWaypoints.Count; ++idx)
@@ -1370,7 +1380,7 @@ public static partial class ioDriver
 
                     for (int idx = 1; idx < pctList.Count; ++idx)
                     {
-                        ptsN.AddRange(BuildMinAngle2(pctList[idx - 1], pctList[idx], 0, 3, m_MinAngle, minLen));
+                        ptsN.AddRange(BuildMinAngle2(pctList[idx - 1], pctList[idx], 0, m_MinAngle, minLen));
                         ptsN.Add(ToVecN(SplineValueAt(pctList[idx])));
                     }
                     Profile.End();
@@ -1414,10 +1424,9 @@ public static partial class ioDriver
             }
 
 
-            private List<VecN> BuildMinAngle2(float _fromPct, float _toPct, int _curDepth, int _maxDepth, float _minAngle, float _minLen)
+            private List<VecN> BuildMinAngle2(float _fromPct, float _toPct, int _curDepth, float _minAngle, float _minLen)
             {
                 var newPts = new List<VecN>();
-                if (_curDepth >= _maxDepth) return newPts;
 
 
                 var prevPtN = ToVecN(SplineValueAt(_fromPct));
@@ -1435,9 +1444,9 @@ public static partial class ioDriver
 
                 var nextDepth = (curAngle > _minAngle) ? 0 : _curDepth + 1;
 
-                newPts.AddRange(BuildMinAngle2(_fromPct, halfPct, nextDepth, _maxDepth, _minAngle, _minLen));
+                newPts.AddRange(BuildMinAngle2(_fromPct, halfPct, nextDepth, _minAngle, _minLen));
                 if (curAngle > _minAngle) newPts.Add(curPtN);
-                newPts.AddRange(BuildMinAngle2(halfPct, _toPct, nextDepth, _maxDepth, _minAngle, _minLen));
+                newPts.AddRange(BuildMinAngle2(halfPct, _toPct, nextDepth, _minAngle, _minLen));
 
                 return newPts;
             }
