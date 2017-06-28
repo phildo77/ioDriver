@@ -4,12 +4,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("ioTweenDLL")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyTitle("ioDriver")]
+[assembly: AssemblyDescription("Generic object tween, drive, event, path, spline and time tool")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("ioTweenDLL")]
-[assembly: AssemblyCopyright("Copyright ©  2015")]
+[assembly: AssemblyCompany("ioSoftSmiths")]
+[assembly: AssemblyProduct("ioDriver")]
+[assembly: AssemblyCopyright("Copyright ©  2017")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
