@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace ioDriverUnity
 {
-    
+
 
     /// Unity Specific Extensions
     public static class ioDriverUnityExt
@@ -210,7 +210,7 @@ namespace ioDriverUnity
             return ioDriver.Tween(() => _thisGo.transform.lossyScale, _thisGo.transform.localScale, _to, _duration);
         }
 
-        public static ioDriver.DTweenPath<Vector3> ioTweenPath(this GameObject _go, ioDriver.Path.Base<Vector3> _path,  float _duration, string _name = null)
+        public static ioDriver.DTweenPath<Vector3> ioTweenPath(this GameObject _go, ioDriver.Path.Base<Vector3> _path, float _duration, string _name = null)
         {
             return ioDriver.Tween(() => _go.transform.position, _path, _duration, _name);
         }
@@ -220,7 +220,7 @@ namespace ioDriverUnity
         {
             return ioDriver.Tween(() => _go.transform.position, _path, _duration, _name);
         }
-        
+
         private static Action<Vector3> ActionRotate(GameObject _go)
         {
             return angles => _go.transform.eulerAngles = NormAngles(angles);
@@ -293,7 +293,7 @@ namespace ioDriverUnity
         {
             get
             {
-                if (applicationIsQuitting) 
+                if (applicationIsQuitting)
                     return null;
 
                 if (m_Instance == null)
@@ -328,7 +328,7 @@ namespace ioDriverUnity
         {
             ioDriver.TimescaleGlobal = UnityEngine.Time.timeScale;
             TeachUnity();
-            if(Application.isPlaying)
+            if (Application.isPlaying)
                 Enabled = true;
         }
 
@@ -471,34 +471,6 @@ namespace ioDriverUnity
             return new Vector4(x, y, z, w);
         }
 
-        private static void TeachCoordVector2()
-        {
-            ioDriver.Teacher.TeachCoord<Vector2>(2, _vals => new Vector2(_vals[0], _vals[1]),
-                _vec => _vec.x,
-                _vec => _vec.y);
-        }
-
-        private static void TeachCoordVector3()
-        {
-            var constrs = new Dictionary<int, ioDriver.Teacher.FuncConstruct<Vector3>>
-            {
-            {3,_vals => new Vector3(_vals[0], _vals[1], _vals[2])},
-            {2,_vals => new Vector3(_vals[0], _vals[1])}
-            };
-            ioDriver.Teacher.TeachCoord(constrs, _vec => _vec.x, _vec => _vec.y, _vec => _vec.z);
-        }
-
-        private static void TeachCoordVector4()
-        {
-            var constrs = new Dictionary<int, ioDriver.Teacher.FuncConstruct<Vector4>>
-            {
-            {4,_vals => new Vector4(_vals[0], _vals[1], _vals[2], _vals[3])},
-            {3, _vals => new Vector4(_vals[0], _vals[1], _vals[2])},
-            {2,_vals => new Vector4(_vals[0], _vals[1])}
-            };
-            ioDriver.Teacher.TeachCoord(constrs, _vec => _vec.x, _vec => _vec.y, _vec => _vec.z, _vec => _vec.w);
-        }
-
         // Teach Unity types
         private static void TeachUnity()
         {
@@ -540,9 +512,33 @@ namespace ioDriverUnity
 
             //TODO alpha?
 
-            TeachCoordVector2();
-            TeachCoordVector3();
-            TeachCoordVector4();
+            ioDriver.Teacher.TeachCoord<Vector2>(2, _vals => new Vector2(_vals[0], _vals[1]),
+                _vec => _vec.x,
+                _vec => _vec.y);
+
+
+            var constrsV3 = new Dictionary<int, ioDriver.Teacher.FuncConstruct<Vector3>>
+            {
+                {3, _vals => new Vector3(_vals[0], _vals[1], _vals[2])},
+                {2, _vals => new Vector3(_vals[0], _vals[1])}
+            };
+            ioDriver.Teacher.TeachCoord(constrsV3, _vec => _vec.x, _vec => _vec.y, _vec => _vec.z);
+
+            var constrsV4 = new Dictionary<int, ioDriver.Teacher.FuncConstruct<Vector4>>
+            {
+                {4, _vals => new Vector4(_vals[0], _vals[1], _vals[2], _vals[3])},
+                {3, _vals => new Vector4(_vals[0], _vals[1], _vals[2])},
+                {2, _vals => new Vector4(_vals[0], _vals[1])}
+            };
+            ioDriver.Teacher.TeachCoord(constrsV4, _vec => _vec.x, _vec => _vec.y, _vec => _vec.z, _vec => _vec.w);
+
+            var constrsClr = new Dictionary<int, ioDriver.Teacher.FuncConstruct<Color>>
+            {
+                {4, _vals => new Color(_vals[0], _vals[1], _vals[2], _vals[3])},
+                {3, _vals => new Color(_vals[0], _vals[1], _vals[2])}
+            };
+            ioDriver.Teacher.TeachCoord(constrsClr, _vec => _vec.r, _vec => _vec.g, _vec => _vec.b, _vec => _vec.a);
+
         }
 
         void Awake()
@@ -561,7 +557,7 @@ namespace ioDriverUnity
         {
             if (Enabled)
             {
-                if(UseUnityTimescale)
+                if (UseUnityTimescale)
                     ioDriver.TimescaleGlobal = UnityEngine.Time.timeScale;
                 ioDriver.Pump();
             }
@@ -629,16 +625,32 @@ namespace ioDriverUnity
         #endregion Methods
     }
 
-    
+
 }
 
 public static partial class ioDriver
 {
+    /// <summary>
+    /// "Tween" specified gameobject over path.
+    /// </summary>
+    /// <param name="_go">Gameobject to tween</param>
+    /// <param name="_path">Path to tween over</param>
+    /// <param name="_duration">Duration of the tween</param>
+    /// <param name="_name">User specified name</param>
+    /// <returns>Tween path driver</returns>
     public static DTweenPath<Vector3> ioTween(GameObject _go, Path.Base<Vector3> _path, float _duration, string _name = null)
     {
         return Tween(() => _go.transform.position, _path, _duration, _name);
     }
 
+    /// <summary>
+    /// "Tween" specified transform over path.
+    /// </summary>
+    /// <param name="_xfrm">Transform to tween</param>
+    /// <param name="_path">Path to tween over</param>
+    /// <param name="_duration">Duration of the tween</param>
+    /// <param name="_name">User specified name</param>
+    /// <returns>Tween path driver</returns>
     public static DTweenPath<Vector3> ioTween(Transform _xfrm, Path.Base<Vector3> _path, float _duration,
         string _name = null)
     {
@@ -649,6 +661,6 @@ public static partial class ioDriver
     {
         InitDone = false;
     }
-    
+
 }
 #endif

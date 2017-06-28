@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Text;
 
 
@@ -33,21 +32,24 @@ public static partial class ioDriver
 
         #region Methods
 
-        /// Get an array of the waypoints of the path, untyped (objects).
-        object[] GetPathPoints();
 
         /// Try to get an array of the waypoints of the path as specified type.  Returns success.
         bool TryGetPathAs<T>(out T[] _points);
 
         /// <summary>
-        /// Attempt to get PathPoints's waypoints as a list of float values.
+        /// Retrieve path's points as an array of floats.
         /// </summary>
         /// The float array's first dimension is ordered index of retrieved waypoints.  
         /// Second dimension is retreived data by waypoint dimension (x,y,z,w,etc.).
-        /// If the waypoints could not be converted to float, the float array will be set to null.
-        /// <param name="_points">Array to populate with waypoint data.</param>
-        /// <returns>Whether the retrieval was successful or not.</returns>
-        bool TryPathFloat(out float[,] _points);
+        /// <param name="_dimCount">Number of dimensions for a point</param>
+        /// <returns>Path points</returns>
+        float[,] GetPathPoints(out int _dimCount);
+
+        /// <summary>
+        /// Retrieve path's points as an array of <see cref="VecN"/>
+        /// </summary>
+        /// <returns>Points as VecN</returns>
+        VecN[] GetPathPoints();
 
         #endregion Methods
 
@@ -518,10 +520,7 @@ public static partial class ioDriver
             /// Array of segments in path.
             protected Segment[] m_PathSegments;
 
-            /// List of raw waypoints used to define the path's frame (the points the path is to pass through), 
-            /// will not have duplicate beginning and end points if closed
-            protected List<T> m_FrameWaypoints;
-
+            /// List of frame waypoints stored as <see cref="VecN"/>
             protected List<VecN> m_FrameVN;
 
             /// List of raw segments used to define the path's frame (the points the path is to pass through).
@@ -546,12 +545,12 @@ public static partial class ioDriver
             /// <param name="_closed">Is this a closed path?</param>
             protected Base(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
             {
-                m_FrameWaypoints = _frameWaypoints.ToList();
+                m_FrameVN = ToVecNs(_frameWaypoints).ToList();
                 m_Closed = _closed;
                 //If closed enforce that first and last are not equal.
                 if (m_Closed)
-                    if (m_FrameWaypoints[0].Equals(m_FrameWaypoints[m_FrameWaypoints.Count - 1]))
-                        m_FrameWaypoints.RemoveAt(m_FrameWaypoints.Count - 1);
+                    if (m_FrameVN[0].Equals(m_FrameVN[m_FrameVN.Count - 1]))
+                        m_FrameVN.RemoveAt(m_FrameVN.Count - 1);
 
                 BuildFrame();
                 IsValid = false;
@@ -644,42 +643,52 @@ public static partial class ioDriver
             /// Get percent along frame for specified frame waypoint
             public float GetFrameWaypointPct(int _index)
             {
-                if (_index < 0f || Closed ? _index > m_FrameWaypoints.Count : _index > m_FrameWaypoints.Count - 1)
+                if (_index < 0f || Closed ? _index > m_FrameVN.Count : _index > m_FrameVN.Count - 1)
                 {
                     Log.Err("Waypoint index out of range.  Received '" + _index + "'");
                     return float.NaN;
                 }
                 if (_index == 0) return 0f;
-                return _index == (Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1) ? 1f : m_FrameSegments[_index].PctStart;
+                return _index == (Closed ? m_FrameVN.Count : m_FrameVN.Count - 1) ? 1f : m_FrameSegments[_index].PctStart;
             }
 
+            /// Finds the nearest position on the path to the indicated point. <seealso cref="GetNearestTo(T,out float, out Segment)"/>
             public T GetNearestTo(T _point)
             {
                 float pct;
                 return GetNearestTo(_point, out pct);
             }
 
+            /// Finds the nearest position on the path to the indicated point. <seealso cref="GetNearestTo(T,out float, out Segment)"/>
             public T GetNearestTo(T _point, out float _pctOnPath)
             {
                 Segment seg;
                 return GetNearestTo(_point, out _pctOnPath, out seg);
             }
 
+            /// <summary>
+            /// Finds the nearest position on the path to the indicated point.
+            /// </summary>
+            /// <param name="_point">Point to use for nearest position</param>
+            /// <param name="_pctOnPath">Populated with percent along path of nearest position was found</param>
+            /// <param name="_nearestSegment">Populated with segment that contains nearest position</param>
+            /// <returns>Nearest Position</returns>
             public T GetNearestTo(T _point, out float _pctOnPath, out Segment _nearestSegment)
             {
                 var closestDist = float.PositiveInfinity;
                 Segment closestSeg = null;
                 VecN pointOnLine = null;
                 var segs = PathSegments;
-                var pts = PathPoints;
+                var ptsN = PathPointsVN;
+                var searchFromN = ToVecN(_point);
 
                 for (int idx = 0; idx < segs.Length; ++idx)
                 {
                     var curSeg = segs[idx];
-                    var segPtA = ToVecN(pts[curSeg.FromIdx]);
-                    var segPtB = ToVecN(pts[curSeg.FromIdx + 1]);
+                    var segPtA = ptsN[curSeg.FromIdx];
+                    var segPtB = ptsN[curSeg.FromIdx + 1];
                     VecN curPtOnLine = null;
-                    var curDist = VecN.PointToLineDistanceSquared(segPtA, segPtB, ToVecN(_point), out curPtOnLine);
+                    var curDist = VecN.PointToLineDistanceSquared(segPtA, segPtB, searchFromN, out curPtOnLine);
                     if (curDist < closestDist)
                     {
                         closestDist = curDist;
@@ -688,49 +697,49 @@ public static partial class ioDriver
                     }
                 }
 
-                var nearestOnPath = pointOnLine.To<T>();
+                var nearestOnPath = pointOnLine;
                 _nearestSegment = closestSeg;
-                var pctInSeg = VecN.ILerp(ToVecN(pts[closestSeg.FromIdx]), ToVecN(pts[closestSeg.FromIdx + 1]),
-                    ToVecN(nearestOnPath));
+                var pctInSeg = VecN.ILerp(ptsN[closestSeg.FromIdx], ptsN[closestSeg.FromIdx + 1],
+                    nearestOnPath);
 
                 _pctOnPath = Teacher.Lerpf(_nearestSegment.PctStart, _nearestSegment.PctEnd, pctInSeg);
 
-                return nearestOnPath;
+                return nearestOnPath.To<T>();
             }
 
 
             /// Add new frame waypoint
             public virtual void AddFrameWaypoint(T _waypoint)
             {
-                m_FrameWaypoints.Add(_waypoint);
+                m_FrameVN.Add(ToVecN(_waypoint));
                 IBuild(true);
             }
 
             /// Insert new frame waypoint at specified index.
             public virtual void InsertFrameWaypoint(int _index, T _waypoint)
             {
-                m_FrameWaypoints.Insert(_index, _waypoint);
+                m_FrameVN.Insert(_index, ToVecN(_waypoint));
                 IBuild(true);
             }
 
             /// Replace the data at index with specified data.
             public virtual void UpdateFrameWaypoint(int _index, T _waypoint)
             {
-                m_FrameWaypoints[_index] = _waypoint;
+                m_FrameVN[_index] = ToVecN(_waypoint);
                 IBuild(true);
             }
 
             /// Remove frame waypoint at specified index.
             public virtual void RemoveFrameWaypoint(int _index)
             {
-                m_FrameWaypoints.RemoveAt(_index);
+                m_FrameVN.RemoveAt(_index);
                 IBuild(true);
             }
 
             /// Get an array of this path's frame waypoints.
             public T[] GetFrameWaypoints()
             {
-                return m_FrameWaypoints.ToArray();
+                return VecN.ToArray<T>(m_FrameVN);
             }
 
             /// <summary>
@@ -739,14 +748,14 @@ public static partial class ioDriver
             /// <param name="_offset">Offset value</param>
             public void Offset(T _offset)
             {
-                for (int idx = 0; idx < m_FrameWaypoints.Count; ++idx)
-                    m_FrameWaypoints[idx] = (ToVecN(m_FrameWaypoints[idx]) + ToVecN(_offset)).To<T>();
+                var offsetN = ToVecN(_offset);
+                for (int idx = 0; idx < m_FrameVN.Count; ++idx)
+                    m_FrameVN[idx] = (m_FrameVN[idx] + offsetN);
 
                 IBuild(true);
             }
 
-
-            private static T LerpPath(float _pct, T[] _points, Segment[] _segments, float _pathLen, bool _closed)
+            private static VecN LerpPathN(float _pct, VecN[] _points, Segment[] _segments, float _pathLen, bool _closed)
             {
                 if (_pct == 0f) return _points[0];
                 if (_pct == 1f) return _closed ? _points[0] : _points[_points.Length - 1];
@@ -764,14 +773,14 @@ public static partial class ioDriver
                 curLen -= tgtSeg.Length;
                 var segTgtLen = tgtLen - curLen;
 
-                T fromVal = _points[tgtSeg.FromIdx];
-                T toVal;
+                VecN fromVal = _points[tgtSeg.FromIdx];
+                VecN toVal;
                 if (_closed && ((tgtSeg.FromIdx + 1) == _points.Length))
                     toVal = _points[0];
                 else
                     toVal = _points[tgtSeg.FromIdx + 1];
 
-                return DTypeInfo<T>.Lerp(fromVal, toVal, segTgtLen / _segments[segIdx - 1].Length);
+                return VecN.Lerp(fromVal, toVal, segTgtLen / _segments[segIdx - 1].Length);
             }
 
             /// <summary>
@@ -781,7 +790,12 @@ public static partial class ioDriver
             /// <returns></returns>
             public T ValueAt(float _pct)
             {
-                return LerpPath(_pct, PathPoints, m_PathSegments, PathLength, false);
+                return ValueAtN(_pct).To<T>();
+            }
+
+            protected VecN ValueAtN(float _pct)
+            {
+                return LerpPathN(_pct, PathPointsVN, m_PathSegments, PathLength, m_Closed);
             }
 
             /// <summary>
@@ -789,14 +803,24 @@ public static partial class ioDriver
             /// </summary>
             /// <param name="_pct"></param>
             /// <returns></returns>
-            protected T FrameWaypointValueAt(float _pct)
+            protected T FrameValueAt(float _pct)
             {
-                var frmPts = ToList(m_FrameWaypoints);
-                if (Closed)
-                    frmPts.Add(m_FrameWaypoints[0]);
-                return LerpPath(_pct, m_FrameWaypoints.ToArray(), m_FrameSegments, FrameLength, m_Closed);
+                return FrameValueAtN(_pct).To<T>();
             }
 
+            protected VecN FrameValueAtN(float _pct)
+            {
+                var frmPts = ToList(m_FrameVN);
+                if (Closed)
+                    frmPts.Add(m_FrameVN[0]);
+                return LerpPathN(_pct, frmPts.ToArray(), m_FrameSegments, FrameLength, m_Closed);
+            }
+
+            /// <summary>
+            /// "Internal Build" rebuilds frame if requested then if <see cref="AutoBuild"/> = true, will call <see cref="BuildPath()"/>.
+            /// If <see cref="AutoBuild"/> = false, will set <see cref="IsValid"/> to false.
+            /// </summary>
+            /// <param name="_rebuildFrame"></param>
             protected void IBuild(bool _rebuildFrame)
             {
                 if (_rebuildFrame)
@@ -816,8 +840,6 @@ public static partial class ioDriver
 
             private void BuildFrame()
             {
-                m_FrameVN = ToVecNs(m_FrameWaypoints).ToList();
-
                 var totLen = 0f;
                 var lengths = new float[m_Closed ? m_FrameVN.Count : m_FrameVN.Count - 1];
                 for (int idx = 0; idx < m_FrameVN.Count - 1; ++idx)
@@ -840,35 +862,9 @@ public static partial class ioDriver
                     m_FrameSegments[idx] = new Segment(idx, startLen / totLen, cumLen / totLen, lengths[idx]);
                 }
 
-                /* - T way
-                var totLen = 0f;
-                var lengths = new float[m_Closed ? m_FrameWaypoints.Count : m_FrameWaypoints.Count - 1];
-                for (int idx = 0; idx < m_FrameWaypoints.Count - 1; ++idx)
-                {
-                    lengths[idx] = DTypeInfo<T>.Length(m_FrameWaypoints[idx], m_FrameWaypoints[idx + 1]);
-                    totLen += lengths[idx];
-                }
-                if (m_Closed)
-                {
-                    lengths[lengths.Length - 1] =
-                        DTypeInfo<T>.Length(m_FrameWaypoints[m_FrameWaypoints.Count - 1], m_FrameWaypoints[0]);
-                    totLen += lengths[lengths.Length - 1];
-                }
-
-                var cumLen = 0f;
-                m_FrameSegments = new Segment[lengths.Length];
-                for (int idx = 0; idx < lengths.Length; ++idx)
-                {
-                    var startLen = cumLen;
-                    cumLen += lengths[idx];
-                    m_FrameSegments[idx] = new Segment(idx, startLen / totLen, cumLen / totLen, lengths[idx]);
-                }
-                 * */
-
             }
 
             /// Override to update <see cref="PathPoints"/> and <see cref="PathSegments"/> here.
-            /// This function is iterated until done or until time out. TODO add doc for TimeOut
             protected abstract bool BuildPath();
 
 
@@ -928,26 +924,27 @@ public static partial class ioDriver
                 }
             }
 
-            bool IPath.TryPathFloat(out float[,] _points)
+            float[,] IPath.GetPathPoints(out int _dimCount)
             {
-                if (m_FrameWaypoints.Count == 0)
+
+                if (m_FrameVN.Count == 0)
                 {
-                    _points = null;
-                    return false;
+                    _dimCount = 0;
+                    return new float[0, 0];
                 }
 
-                int dCount = DTypeInfo<T>.DimCount;
-                if (dCount == 0)
+                _dimCount = m_FrameVN[0].DimCount;
+                if (_dimCount == 0)
                 {
-                    _points = null;
-                    return false;
+                    _dimCount = 0;
+                    return new float[0, 0];
                 }
 
-                _points = new float[PathPoints.Length, dCount];
-                for (int idx = 0; idx < PathPoints.Length; ++idx)
-                    for (int dc = 1; dc <= dCount; ++dc)
-                        _points[idx, dc - 1] = DTypeInfo<T>.GetDimsFunc[dc](PathPoints[idx]);
-                return true;
+                var points = new float[PathPointsVN.Length, _dimCount];
+                for (int idx = 0; idx < PathPointsVN.Length; ++idx)
+                    for (int dc = 0; dc < _dimCount; ++dc)
+                        points[idx, dc - 1] = PathPointsVN[idx].Vals[dc];
+                return points;
             }
 
             bool IPath.TryGetPathAs<TW>(out TW[] _points)
@@ -963,12 +960,14 @@ public static partial class ioDriver
                 return true;
             }
 
-            object[] IPath.GetPathPoints()
+            VecN[] IPath.GetPathPoints()
             {
-                var asObj = new object[PathPoints.Length];
-                for (int idx = 0; idx < PathPoints.Length; ++idx)
-                    asObj[idx] = (object)PathPoints[idx];
-                return asObj;
+                var pts = new VecN[PathPointsVN.Length];
+                for (int idx = 0; idx < PathPointsVN.Length; ++idx)
+                {
+                    pts[idx] = new VecN(PathPointsVN[idx]);
+                }
+                return pts;
             }
 
             Type IPath.WaypointType
@@ -978,9 +977,14 @@ public static partial class ioDriver
 
         }
 
+        /// <summary>
+        /// Determines which mode spline points are calculated.
+        /// </summary>
         public enum SplinePointMode
         {
+            /// Build spline points based on a minimum angle between segments.
             MinAngle,
+            /// Build spline points based on a minimum length for segments.
             SegmentLength
         }
 
@@ -1003,6 +1007,9 @@ public static partial class ioDriver
 
             private SplinePointMode m_PointMode;
 
+            /// <summary>
+            /// Get / Set the build mode. <seealso cref="SplinePointMode"/>
+            /// </summary>
             public SplinePointMode PointMode
             {
                 get { return m_PointMode; }
@@ -1017,6 +1024,9 @@ public static partial class ioDriver
 
             private float m_MinAngle;
 
+            /// <summary>
+            /// Get / Set minimum angle for MinAngle mode.
+            /// </summary>
             public float MinAngle
             {
                 get { return m_MinAngle; }
@@ -1036,6 +1046,9 @@ public static partial class ioDriver
 
             private float m_MinAngleMinLength;
 
+            /// <summary>
+            /// Get / Set minimum segment length for MinAngle mode.
+            /// </summary>
             public float MinAngleMinLength
             {
                 get { return m_MinAngleMinLength; }
@@ -1043,7 +1056,7 @@ public static partial class ioDriver
                 {
                     if (value <= 0 && value != MA_LENGTH_AUTO)
                     {
-                        m_MinAngleMinLength = GetDefaultMinAngleMinLength();
+                        m_MinAngleMinLength = SplineLengthEstimated() / 500f;
                         Log.Err("Min Angle Min length must greater than zero.  Setting to " + m_MinAngleMinLength);
 
                     }
@@ -1133,31 +1146,37 @@ public static partial class ioDriver
 
             /// <summary>
             /// Returns value of spline at specified percentage along spline.
-            /// Abstract - Override to implement.  Built in splines (see <see cref="Bezier{T}"/> and <see cref="Cubic{T}"/>) caluclate value using
-            /// Spline's mathematical formula.  This will not produce the same result as <see cref="Base{T}.ValueAt"/>, that calculation is done using 
-            /// linear, eqidistant segments.
             /// </summary>
             /// <param name="_pct">Percentage along spline (0 to 1f)</param>
             /// <returns>Value at specified percentage</returns>
-            public abstract T SplineValueAt(float _pct);
+            public T SplineValueAt(float _pct) { return SplineValueAtN(_pct).To<T>(); }
 
-            public float GetDefaultSegmentLength()
+            public T SplineTangentAt(float _pct) { return SplineTangentAtN(_pct).To<T>(); }
+
+            /// <summary>
+            /// Returns VecN value of spline at specified percentage along spline.
+            /// Abstract - Override to implement.  Built in splines (see <see cref="Bezier{T}"/> and <see cref="Cubic{T}"/>) caluclate value using
+            /// Spline's mathematical formula.  
+            /// </summary>
+            /// <param name="_pct">Percentage along spline (0 to 1f)</param>
+            /// <returns>Value at specified percentage</returns>
+            protected abstract VecN SplineValueAtN(float _pct);
+
+            protected abstract VecN SplineTangentAtN(float _pct);
+
+            private float GetDefaultSegmentLength()
             {
                 return FrameLength / 10f;
             }
 
-            public float GetDefaultMinAngleMinLength()
-            {
-                return SplineLengthEstimated() / (float)1000;
-            }
 
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
-            /// by sampling <see cref="SplineValueAt"/>, population method depends on <see cref="ModeEQ"/>
             protected override bool BuildPath()
             {
-                Func<float, float, float> glptFunc =
+                Func<float, float, float> glptFuncSq =
                     (_fromPct, _toPct) =>
-                        DTypeInfo<T>.Length(SplineValueAt(_fromPct), SplineValueAt(_toPct));
+                        (SplineValueAtN(_fromPct) - SplineValueAtN(_toPct)).MagnitudeSquared;
+
 
                 var timeStamp = System.DateTime.UtcNow.Ticks;
                 if (PointMode == SplinePointMode.SegmentLength)
@@ -1167,25 +1186,22 @@ public static partial class ioDriver
                     if (m_SegmentAccuracy <= 0 || m_SegmentAccuracy >= 1f)
                         m_SegmentAccuracy = 0.3f;
 
-                    var tgtLenMin = m_SegmentLength - m_SegmentLength * m_SegmentAccuracy;
-                    var tgtLenMax = m_SegmentLength + m_SegmentLength * m_SegmentAccuracy;
-                    var guessPct = m_SegmentLength / FrameLength;
+                    var tgtLenMinSq = (m_SegmentLength - m_SegmentLength * m_SegmentAccuracy)
+                        * (m_SegmentLength - m_SegmentLength * m_SegmentAccuracy);
+                    var tgtLenMaxSq = (m_SegmentLength + m_SegmentLength * m_SegmentAccuracy)
+                        * (m_SegmentLength + m_SegmentLength * m_SegmentAccuracy);
+                    var guessPct = m_SegmentLength / SplineLengthEstimated();
 
-                    var fromPt = m_FrameWaypoints[0];
-                    var endPt = SplineValueAt(1f);
-                    var path = new List<T> { fromPt };
-                    var pathN = new List<VecN> { ToVecN(fromPt) };
+                    var fromPtN = m_FrameVN[0];
+                    var endPtN = SplineValueAtN(1f);
+                    var pathN = new List<VecN> { fromPtN };
                     var totalLength = 0f;
                     var lengths = new List<float>();
 
 
 
                     var fromPct = 0f;
-
-                    var iters = 0;
-
                     var done = false;
-                    float len;
                     while (!done)
                     {
 
@@ -1194,30 +1210,31 @@ public static partial class ioDriver
                         var pctB = float.MaxValue;
                         var curPct = fromPct + guessPct;
 
+                        float lenSq;
                         if (curPct >= 1f)
                         {
                             curPct = 1f;
-                            var checkLen = DTypeInfo<T>.Length(fromPt, endPt);
-                            if (checkLen <= tgtLenMin)
+                            var checkLenSq = (endPtN - fromPtN).MagnitudeSquared;
+                            if (checkLenSq <= tgtLenMinSq)
                             {
                                 done = true;
-                                len = checkLen;
+                                lenSq = checkLenSq;
                             }
                             else
-                                len = glptFunc(pctA, curPct);
+                                lenSq = glptFuncSq(pctA, curPct);
                         }
                         else
-                            len = glptFunc(pctA, curPct);
+                            lenSq = glptFuncSq(pctA, curPct);
 
 
 
                         while (!done)
                         {
 
-                            if (len > tgtLenMin && len <= tgtLenMax)
+                            if (lenSq >= tgtLenMinSq && lenSq <= tgtLenMaxSq)
                                 break;
 
-                            if (len < tgtLenMin && curPct > pctA)
+                            if (lenSq < tgtLenMinSq && curPct > pctA)
                             {
                                 pctA = curPct;
                                 if (!wrapped)
@@ -1225,7 +1242,7 @@ public static partial class ioDriver
                                 else
                                     curPct = pctA + (pctB - pctA) / 2f;
                             }
-                            else if (len > tgtLenMax && curPct <= pctB)
+                            else if (lenSq > tgtLenMaxSq && curPct <= pctB)
                             {
                                 wrapped = true;
                                 pctB = curPct;
@@ -1237,36 +1254,38 @@ public static partial class ioDriver
                                 done = true;
                                 curPct = 1f;
                             }
-                            len = glptFunc(fromPct, curPct);
+                            lenSq = glptFuncSq(fromPct, curPct);
+
                             var curTicks = DateTime.UtcNow.Ticks - timeStamp;
                             if (curTicks / System.TimeSpan.TicksPerMillisecond > TimeOut)
                             {
                                 Log.Err("Timeout building path.  Timeout = " + TimeOut + " ms");
                                 return false;
                             }
+
                         }
 
-                        var pt = SplineValueAt(curPct);
+                        var pt = SplineValueAtN(curPct);
 
-                        path.Add(pt);
-                        pathN.Add(ToVecN(pt));
+                        pathN.Add(pt);
+                        var len = (float)Math.Sqrt(lenSq);
                         lengths.Add(len);
                         totalLength += len;
                         fromPct = curPct;
-                        fromPt = pt;
+                        fromPtN = pt;
                     }
 
-                    if (path.Count < 2)
+                    if (pathN.Count < 2)
                     {
                         Log.Warn("Segment Length too long.  (SegmentLength = '" + SegmentLength + "')");
-                        PathPoints = new T[] { m_FrameWaypoints[0], m_FrameWaypoints[m_FrameWaypoints.Count - 1] };
+                        PathPointsVN = new VecN[] { m_FrameVN[0], m_FrameVN[m_FrameVN.Count - 1] };
                     }
                     else
-                        PathPoints = path.ToArray();
+                        PathPointsVN = pathN.ToArray();
 
                     //Update Segment pct
                     var progressLen = 0f;
-                    m_PathSegments = new Segment[PathPoints.Length - 1];
+                    m_PathSegments = new Segment[PathPointsVN.Length - 1];
                     for (int idx = 0; idx < m_PathSegments.Length; ++idx)
                     {
                         var frmPct = progressLen / totalLength;
@@ -1274,119 +1293,41 @@ public static partial class ioDriver
                         var toPct = progressLen / totalLength;
                         m_PathSegments[idx] = new Segment(idx, frmPct, toPct, lengths[idx]);
                     }
+
+                    PathPoints = VecN.ToArray<T>(PathPointsVN);
                     return true;
                 }
                 else
                 {
 
-                    /*
-                    if (m_MinAngle <= 0 || m_MinAngle >= 180)
-                        m_MinAngle = 5f;
-                    if (m_MinAngleSamples <= 1)
-                        m_MinAngleSamples = 100;
-
-                    var pctAdder = 1f / (float) m_MinAngleSamples;
-
-
-                    var allPts = new List<T>();
-                    for (float pct = 0f; pct < 1f; pct += pctAdder)
-                        allPts.Add(SplineValueAt(pct));
-                    allPts.Add(SplineValueAt(1f));
-
-                    var pts = new List<T> {allPts[0]};
-                    var ptsN = new List<VecN> {ToVecN(allPts[0])};
-                    var ptCnt = allPts.Count;
-                    var lengths = new List<float>();
-                    var totLen = 0f;
-
-
-
-                    var lastPinN = ptsN[0];
-                    var prevPtN = lastPinN;
-                    var nextPtN = ToVecN(allPts[1]);
-
-                    var curAngleTot = 0f;
-                    var lastPinIdx = 0;
-
-                    for (int idx = 1; idx < ptCnt - 2; ++idx)
-                    {
-                        var curPtN = nextPtN;
-                        nextPtN = ToVecN(allPts[idx + 1]);
-                        var prevVecN = curPtN - prevPtN;
-                        var nextVecN = nextPtN - curPtN;
-
-                        var angleD = ioMath.ToDegrees(VecN.Angle(prevVecN, nextVecN));
-                        curAngleTot += angleD;
-                        if (curAngleTot >= 2 * MinAngle && lastPinIdx != idx - 1 && idx != 1)
-                        {
-                            var backVecN = prevPtN - lastPinN;
-                            var backMag = backVecN.Magnitude;
-                            pts.Add(prevPtN.To<T>());
-                            ptsN.Add(prevPtN);
-                            lengths.Add(backMag);
-                            totLen += lengths.Last();
-
-                            lastPinN = prevPtN;
-                        }
-
-                        if (curAngleTot >= MinAngle)
-                        {
-                            pts.Add(curPtN.To<T>());
-                            ptsN.Add(curPtN);
-                            var lastPinVecN = (curPtN - lastPinN);
-                            lengths.Add(lastPinVecN.Magnitude);
-                            totLen += lengths.Last();
-
-                            lastPinIdx = idx;
-                            lastPinN = curPtN;
-                            curAngleTot = 0f;
-                        }
-
-                        prevPtN = curPtN;
-                    }
-
-                    pts.Add(allPts[ptCnt - 1]);
-                    ptsN.Add(ToVecN(pts[pts.Count - 1]));
-                    lengths.Add((ptsN[ptsN.Count - 1] - lastPinN).Magnitude);
-
-                    
-
-
-                    //Setup Segments
-                    var progressLen = 0f;
-
-                    m_PathSegments = new Segment[pts.Count - 1];
-                    for (int idx = 0; idx < m_PathSegments.Length; ++idx)
-                    {
-                        var frmPct = progressLen / totLen;
-                        progressLen += lengths[idx];
-                        var toPct = progressLen / totLen;
-                        m_PathSegments[idx] = new Segment(idx, frmPct, toPct, lengths[idx]);
-                    }
-
-                    PathPoints = pts.ToArray();
-                    PathPointsVN = ptsN.ToArray();
-                    return true;
-                     * */
-
-                    Profile.Begin("Build Min Angle");
-                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? GetDefaultMinAngleMinLength() : m_MinAngleMinLength;
+                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? (SplineLengthEstimated() / 500f) : m_MinAngleMinLength;
                     var ptsN = new List<VecN> { m_FrameVN[0] };
                     var pctList = new List<float> { 0f };
-                    for (int idx = 1; idx < m_FrameWaypoints.Count; ++idx)
+                    for (int idx = 1; idx < m_FrameVN.Count; ++idx)
                         pctList.Add(GetFrameWaypointSplinePct(idx));
                     if (Closed)
                         pctList.Add(1f);
 
                     for (int idx = 1; idx < pctList.Count; ++idx)
                     {
-                        ptsN.AddRange(BuildMinAngle2(pctList[idx - 1], pctList[idx], 0, m_MinAngle, minLen));
+                        ptsN.AddRange(BuildMinAngle2(pctList[idx - 1], pctList[idx], m_MinAngle, minLen));
                         ptsN.Add(ToVecN(SplineValueAt(pctList[idx])));
                     }
-                    Profile.End();
 
-
-
+                    /* -- Entire path no split (unless closed, split in half)
+                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? (SplineLengthEstimated() / 500f) : m_MinAngleMinLength;
+                    var ptsN = new List<VecN> { m_FrameVN[0] };
+                    if (!Closed)
+                    {
+                        ptsN.AddRange(BuildMinAngle2(0f, 1f, m_MinAngle, minLen));
+                    }
+                    else
+                    {
+                        ptsN.AddRange(BuildMinAngle2(0,0.5f, m_MinAngle, minLen));
+                        ptsN.AddRange(BuildMinAngle2(0.5f,1f,m_MinAngle,minLen));
+                    }
+                    ptsN.Add(SplineValueAtN(1f));
+                     */
 
                     var pts = new T[ptsN.Count];
                     pts[0] = ptsN[0].To<T>();
@@ -1424,29 +1365,28 @@ public static partial class ioDriver
             }
 
 
-            private List<VecN> BuildMinAngle2(float _fromPct, float _toPct, int _curDepth, float _minAngle, float _minLen)
+            private List<VecN> BuildMinAngle2(float _fromPct, float _toPct, float _minAngle, float _minLen)
             {
                 var newPts = new List<VecN>();
 
 
-                var prevPtN = ToVecN(SplineValueAt(_fromPct));
-                var nextPtN = ToVecN(SplineValueAt(_toPct));
+                var prevPtN = SplineValueAtN(_fromPct);
+                var nextPtN = SplineValueAtN(_toPct);
                 var lenSq = (prevPtN - nextPtN).MagnitudeSquared;
                 if (lenSq < (_minLen * _minLen)) return newPts;
 
                 var halfPct = _fromPct + (_toPct - _fromPct) / 2f;
-                var curPtN = ToVecN(SplineValueAt(halfPct));
+                var curPtN = SplineValueAtN(halfPct);
 
                 var prevVecN = curPtN - prevPtN;
                 var nextVecN = nextPtN - curPtN;
 
                 var curAngle = ioMath.ToDegrees(VecN.Angle(prevVecN, nextVecN));
 
-                var nextDepth = (curAngle > _minAngle) ? 0 : _curDepth + 1;
 
-                newPts.AddRange(BuildMinAngle2(_fromPct, halfPct, nextDepth, _minAngle, _minLen));
+                newPts.AddRange(BuildMinAngle2(_fromPct, halfPct, _minAngle, _minLen));
                 if (curAngle > _minAngle) newPts.Add(curPtN);
-                newPts.AddRange(BuildMinAngle2(halfPct, _toPct, nextDepth, _minAngle, _minLen));
+                newPts.AddRange(BuildMinAngle2(halfPct, _toPct, _minAngle, _minLen));
 
                 return newPts;
             }
@@ -1460,14 +1400,14 @@ public static partial class ioDriver
             /// <returns>Percentage (0 to 1)</returns>
             public float GetFrameWaypointSplinePct(int _index)
             {
-                if (_index < 0 || (Closed ? _index > m_FrameWaypoints.Count : _index >= m_FrameWaypoints.Count))
+                if (_index < 0 || (Closed ? _index > m_FrameVN.Count : _index >= m_FrameVN.Count))
                     throw new IndexOutOfRangeException("Invalid waypoint index.");
 
-                if ((m_Closed ? _index == m_FrameWaypoints.Count : _index == m_FrameWaypoints.Count - 1))
+                if ((m_Closed ? _index == m_FrameVN.Count : _index == m_FrameVN.Count - 1))
                     return 1f;
                 if (_index == 0) return 0;
 
-                var sectionCnt = m_FrameWaypoints.Count - 1;
+                var sectionCnt = m_FrameVN.Count - 1;
                 if (Closed) sectionCnt++;
                 return (float)_index / sectionCnt;
 
@@ -1490,13 +1430,17 @@ public static partial class ioDriver
                 return checkedDims.ToArray();
             }
 
-            private float SplineLengthEstimated()
+            /// <summary>
+            /// Get estimated length of spline.
+            /// </summary>
+            /// <param name="_segmentCnt">Number of segments to break spline into</param>
+            /// <returns>Estimated length</returns>
+            public float SplineLengthEstimated(int _segmentCnt = 99)
             {
                 var estLen = 0f;
-                var sampleCount = 100;
-                for (int idx = 0; idx < sampleCount; ++idx)
-                    estLen += DTypeInfo<T>.Length(SplineValueAt((float)idx / sampleCount),
-                        SplineValueAt((float)(idx + 1) / sampleCount));
+                for (int idx = 0; idx <= _segmentCnt; ++idx)
+                    estLen += DTypeInfo<T>.Length(SplineValueAt((float)idx / _segmentCnt),
+                        SplineValueAt((float)(idx + 1) / _segmentCnt));
                 return estLen;
             }
         }
@@ -1560,6 +1504,18 @@ public static partial class ioDriver
                 return p;
             }
 
+            public static float bezierDeriv(float _pct, float _p0, float _p1, float _p2, float _p3)
+            {
+                float p = 0;
+                p += _p0 * -3 * ((1 - _pct) * (1 - _pct));
+                p += _p1 * 3 * ((1 - _pct) * (1 - _pct));
+                p -= _p1 * 6 * _pct * (1 - _pct);
+                p -= _p2 * 3 * _pct * _pct;
+                p += _p2 * 6 * _pct * (1 - _pct);
+                p += _p3 * 3 * _pct * +_pct;
+                return p;
+            }
+
             /*
             private static float bezier(float _pct, Control _a, Control _b, Teacher.FuncGetDim<T> _funcGetVal)
             {
@@ -1571,20 +1527,15 @@ public static partial class ioDriver
             }
              * */
 
-            /// <summary>
-            /// Get value along bezier spline at specified percent.  Calculated
-            /// using bezier mathematics (not a linear progression).
-            /// </summary>
-            /// <param name="_pct">Percent along spline (0 to 1)</param>
-            /// <returns>Value at specified percent</returns>
-            public override T SplineValueAt(float _pct)
+
+            protected override VecN SplineValueAtN(float _pct)
             {
                 if (_pct <= 0f)
-                    return m_FrameWaypoints[0];
+                    return m_FrameVN[0];
                 if (_pct >= 1f)
-                    return Closed ? m_FrameWaypoints[0] : m_FrameWaypoints[m_FrameWaypoints.Count - 1];
+                    return Closed ? m_FrameVN[0] : m_FrameVN[m_FrameVN.Count - 1];
 
-                var bezCnt = m_FrameWaypoints.Count;
+                var bezCnt = m_FrameVN.Count;
                 if (!Closed) bezCnt--;
 
                 var bezPos = _pct * bezCnt;
@@ -1592,7 +1543,7 @@ public static partial class ioDriver
                 float bezPct = (bezPos - bezIdx);
 
                 var bezIdxB = bezIdx + 1;
-                if (bezIdxB == m_FrameWaypoints.Count)
+                if (bezIdxB == m_FrameVN.Count)
                     bezIdxB = 0;
 
 
@@ -1606,10 +1557,39 @@ public static partial class ioDriver
                     if (Contains(m_DimsToSpline, (idx + 1)))
                         vals[idx] = bezier(bezPct, p0, p1, p2, p3);
                     else
-                        vals[idx] = DTypeInfo<T>.GetDimsFunc[idx + 1](FrameWaypointValueAt(_pct));
+                        vals[idx] = DTypeInfo<T>.GetDimsFunc[idx + 1](FrameValueAt(_pct));
                 }
+                return new VecN(vals);
+            }
 
-                return DTypeInfo<T>.Constructs[DTypeInfo<T>.DimCount](vals);
+            protected override VecN SplineTangentAtN(float _pct)
+            {
+                var bezCnt = m_FrameVN.Count;
+                if (!Closed) bezCnt--;
+
+                var bezPos = _pct * bezCnt;
+                var bezIdx = (int)bezPos;
+                float bezPct = (bezPos - bezIdx);
+
+                var bezIdxB = bezIdx + 1;
+                if (bezIdxB == m_FrameVN.Count)
+                    bezIdxB = 0;
+
+
+                float[] vals = new float[DTypeInfo<T>.DimCount];
+                for (int idx = 0; idx < DTypeInfo<T>.DimCount; ++idx)
+                {
+                    var p0 = m_FrameVN[bezIdx].Vals[idx];
+                    var p1 = p0 + m_Control[bezIdx].VOutN.Vals[idx];
+                    var p3 = m_FrameVN[bezIdxB].Vals[idx];
+                    var p2 = p3 + m_Control[bezIdxB].VInN.Vals[idx];
+                    if (Contains(m_DimsToSpline, (idx + 1)))
+                        vals[idx] = bezierDeriv(bezPct, p0, p1, p2, p3);
+                    else
+                        vals[idx] = 0; //TODO incorrect
+                }
+                return new VecN(vals);
+
             }
 
             /// <summary>
@@ -1619,19 +1599,19 @@ public static partial class ioDriver
             /// <returns>Created control object</returns>
             public Control CreateDefaultCtl(int _idx)
             {
-                var wps = m_FrameWaypoints;
+                var wps = m_FrameVN;
                 var n = wps.Count;
 
-                var wp = ToVecN(wps[_idx]);
+                var wp = wps[_idx];
                 VecN from = null;
                 VecN to = null;
                 if (_idx == 0)
-                    from = Closed ? ToVecN(wps[n - 1]) : wp;
+                    from = Closed ? wps[n - 1] : wp;
                 else if (_idx == n - 1)
-                    to = Closed ? ToVecN(wps[0]) : wp;
+                    to = Closed ? wps[0] : wp;
 
-                from = from ?? ToVecN(wps[_idx - 1]);
-                to = to ?? ToVecN(wps[_idx + 1]);
+                from = from ?? wps[_idx - 1];
+                to = to ?? wps[_idx + 1];
 
                 var vOut = (to - from).Normalized;
                 var vIn = vOut;
@@ -1655,7 +1635,7 @@ public static partial class ioDriver
             private Control[] CreateDefaultCtl()
             {
                 var control = new List<Control>();
-                for (int idx = 0; idx < m_FrameWaypoints.Count; ++idx)
+                for (int idx = 0; idx < m_FrameVN.Count; ++idx)
                     control.Add(CreateDefaultCtl(idx));
                 return control.ToArray();
             }
@@ -1670,66 +1650,82 @@ public static partial class ioDriver
                 return cntl;
             }
 
-            public void SetControl(Control[] _newControl)
+            public Control GetControlAt(int _frameIdx)
+            {
+                if (_frameIdx < 0 || _frameIdx >= m_FrameVN.Count)
+                {
+                    Log.Err("SetControl : Frame waypoint index out of range.  Got " + _frameIdx);
+                    return null;
+                }
+
+                return new Control(m_Control[_frameIdx]);
+            }
+
+            public Bezier<T> SetControl(Control[] _newControl)
             {
                 if (_newControl.Length != m_Control.Length)
                 {
                     Log.Err("SetControl : New control array length does not match.  Got " + _newControl.Length +
                             " and expected " + m_Control.Length);
-                    return;
+                    return this;
                 }
 
                 for (int idx = 0; idx < _newControl.Length; ++idx)
                     m_Control[idx] = _newControl[idx];
 
                 IBuild(false);
+                return this;
             }
 
-            public void SetControl(int _wayptIdx, Control _control)
+            public Bezier<T> SetControlAt(int _wayptIdx, Control _control)
             {
-                if (_wayptIdx < 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                if (_wayptIdx < 0 || _wayptIdx >= m_FrameVN.Count)
                 {
-                    Log.Err("SetControl : Waypoint index out of range.  Got " + _wayptIdx);
-                    return;
+                    Log.Err("SetControlAt : Waypoint index out of range.  Got " + _wayptIdx);
+                    return this;
                 }
 
                 m_Control[_wayptIdx] = _control;
 
                 IBuild(false);
+                return this;
             }
 
-            public void SetControlOutPt(int _wayptIdx, T _outPt)
+            public Bezier<T> SetControlPosOut(int _wayptIdx, T _outPt)
             {
-                if (_wayptIdx < 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                if (_wayptIdx < 0 || _wayptIdx >= m_FrameVN.Count)
                 {
                     Log.Err("SetControlOutPt : Waypoint index out of range.  Got " + _wayptIdx);
-                    return;
+                    return this;
                 }
                 var cntl = m_Control[_wayptIdx];
-                var wayPt = ToVecN(m_FrameWaypoints[_wayptIdx]);
+                var wayPt = m_FrameVN[_wayptIdx];
                 var outPt = ToVecN(_outPt);
                 var newVec = (outPt - wayPt);
-                if (ToVecN(cntl.OutVec) == newVec) return;
+                if (ToVecN(cntl.OutVec) == newVec) return this;
                 cntl.OutVec = newVec.To<T>();
 
                 IBuild(false);
+
+                return this;
             }
 
-            public void SetControlInPt(int _wayptIdx, T _inPt)
+            public Bezier<T> SetControlPosIn(int _wayptIdx, T _inPt)
             {
-                if (_wayptIdx < 0 || _wayptIdx >= m_FrameWaypoints.Count)
+                if (_wayptIdx < 0 || _wayptIdx >= m_FrameVN.Count)
                 {
                     Log.Err("SetControlInPt : Waypoint index out of range.  Got " + _wayptIdx);
-                    return;
+                    return this;
                 }
                 var cntl = m_Control[_wayptIdx];
-                var wayPt = ToVecN(m_FrameWaypoints[_wayptIdx]);
+                var wayPt = m_FrameVN[_wayptIdx];
                 var inPt = ToVecN(_inPt);
                 var newVec = (inPt - wayPt);
-                if (newVec == ToVecN(cntl.InVec)) return;
+                if (newVec == ToVecN(cntl.InVec)) return this;
                 cntl.InVec = newVec.To<T>();
 
                 IBuild(false);
+                return this;
             }
 
 
@@ -1917,17 +1913,12 @@ public static partial class ioDriver
                 return base.BuildPath();
             }
 
-            /// <summary>
-            /// Get value along cubic spline at specified percent.  Calculated
-            /// using cubic (not a linear progression).
-            /// </summary>
-            /// <param name="_pct">Percent along spline (0 to 1)</param>
-            /// <returns>Value at specified percent</returns>
-            public override T SplineValueAt(float _pct)
+
+            protected override VecN SplineValueAtN(float _pct)
             {
-                if (_pct <= 0f) return m_FrameWaypoints[0];
+                if (_pct <= 0f) return m_FrameVN[0];
                 if (_pct >= 1f)
-                    return Closed ? m_FrameWaypoints[0] : m_FrameWaypoints[m_FrameWaypoints.Count - 1];
+                    return Closed ? m_FrameVN[0] : m_FrameVN[m_FrameVN.Count - 1];
                 var cubPosition = _pct * m_Cubs[m_DimsToSpline[0] - 1].Length;
                 int cubicNum = (int)cubPosition;
                 float cubicPos = (cubPosition - cubicNum);
@@ -1938,14 +1929,13 @@ public static partial class ioDriver
                     if (Contains(m_DimsToSpline, (idx + 1)))
                         vals[idx] = m_Cubs[idx][cubicNum].Evaluate(cubicPos);
                     else
-                        vals[idx] = DTypeInfo<T>.GetDimsFunc[idx + 1](FrameWaypointValueAt(_pct));
+                        vals[idx] = FrameValueAtN(_pct).Vals[idx];
                 }
-                return DTypeInfo<T>.Constructs[DTypeInfo<T>.DimCount](vals);
+                return new VecN(vals);
             }
 
 
-            /* TODO
-            public T SplineTangentAt(float _pct)
+            protected override VecN SplineTangentAtN(float _pct)
             {
                 if (_pct <= 0f) _pct = 0;
                 if (_pct >= 1f)
@@ -1960,11 +1950,10 @@ public static partial class ioDriver
                     if (Contains(m_DimsToSpline, (idx + 1)))
                         vals[idx] = m_Cubs[idx][cubicNum].EvaluateDeriv(cubicPos);
                     else
-                        vals[idx] = 0;
+                        vals[idx] = 0; //TODO incorrect
                 }
-                return DTypeInfo<T>.Constructs[DTypeInfo<T>.DimCount](vals);
+                return new VecN(vals);
             }
-            */
 
             private static CubicValue[] CalcNatCubic(List<VecN> _vals, int _dim)
             {
@@ -2071,109 +2060,6 @@ public static partial class ioDriver
                 return C;
             }
 
-            /*
-            private static CubicValue[] CalcNatCubic(T[] _vals, Teacher.FuncGetDim<T> _funcGetVal)
-            {
-                int n = _vals.Length - 1;
-
-                float[] gamma = new float[n + 1];
-                float[] delta = new float[n + 1];
-                float[] D = new float[n + 1];
-
-                int i;
-                gamma[0] = 1.0f / 2.0f;
-                for (i = 1; i < n; i++)
-                    gamma[i] = 1.0f / (4.0f - gamma[i - 1]);
-
-                gamma[n] = 1.0f / (2.0f - gamma[n - 1]);
-
-                float p0 = _funcGetVal(_vals[0]);
-                float p1 = _funcGetVal(_vals[1]);
-
-                delta[0] = 3.0f * (p1 - p0) * gamma[0];
-                for (i = 1; i < n; i++)
-                {
-                    p0 = _funcGetVal(_vals[i - 1]);
-                    p1 = _funcGetVal(_vals[i + 1]);
-                    delta[i] = (3.0f * (p1 - p0) - delta[i - 1]) * gamma[i];
-                }
-                p0 = _funcGetVal(_vals[n - 1]);
-                p1 = _funcGetVal(_vals[n]);
-
-                delta[n] = (3.0f * (p1 - p0) - delta[n - 1]) * gamma[n];
-
-                D[n] = delta[n];
-                for (i = n - 1; i >= 0; i--)
-                    D[i] = delta[i] - gamma[i] * D[i + 1];
-
-                CubicValue[] cubics = new CubicValue[n];
-
-                for (i = 0; i < n; i++)
-                {
-                    p0 = _funcGetVal(_vals[i]);
-                    p1 = _funcGetVal(_vals[i + 1]);
-
-                    cubics[i] = new CubicValue(
-                        p0,
-                        D[i],
-                        3 * (p1 - p0) - 2 * D[i] - D[i + 1],
-                        2 * (p0 - p1) + D[i] + D[i + 1]
-                        );
-                }
-                return cubics;
-            }
-
-            private static CubicValue[] CalcNatCubicClosed(T[] _values, Teacher.FuncGetDim<T> _funcGetVal)
-            {
-                var values = ToList(_values);
-                values.Add(values[0]);
-                _values = values.ToArray();
-                var n = _values.Length - 2;
-
-                float[] w = new float[n + 1];
-                float[] v = new float[n + 1];
-                float[] y = new float[n + 1];
-                float[] D = new float[n + 1];
-                float z, F, G, H;
-                int k;
-
-                w[1] = v[1] = z = 1.0f / 4.0f;
-                y[0] = z * 3 * (_funcGetVal(_values[1]) - _funcGetVal(_values[n]));
-                H = 4;
-                F = 3 * (_funcGetVal(_values[0]) - _funcGetVal(_values[n - 1]));
-                G = 1;
-                for (k = 1; k < n; k++)
-                {
-                    v[k + 1] = z = 1 / (4 - v[k]);
-                    w[k + 1] = -z * w[k];
-                    y[k] = z * (3 * (_funcGetVal(_values[k + 1]) - _funcGetVal(_values[k - 1])) - y[k - 1]);
-                    H = H - G * w[k];
-                    F = F - G * y[k - 1];
-                    G = -v[k] * G;
-                }
-                H = H - (G + 1) * (v[n] + w[n]);
-                y[n] = F - (G + 1) * y[n - 1];
-
-                D[n] = y[n] / H;
-                D[n - 1] = y[n - 1] - (v[n] + w[n]) * D[n];
-                for (k = n - 2; k >= 0; k--)
-                {
-                    D[k] = y[k] - v[k + 1] * D[k + 1] - w[k + 1] * D[n];
-                }
-
-                CubicValue[] C = new CubicValue[n + 1];
-                for (k = 0; k < n; k++)
-                {
-                    C[k] = new CubicValue((float)_funcGetVal(_values[k]), D[k],
-                        3 * (_funcGetVal(_values[k + 1]) - _funcGetVal(_values[k])) - 2 * D[k] - D[k + 1],
-                        2 * (_funcGetVal(_values[k]) - _funcGetVal(_values[k + 1])) + D[k] + D[k + 1]);
-                }
-                C[n] = new CubicValue((float)_funcGetVal(_values[n]), D[n],
-                    3 * (_funcGetVal(_values[0]) - _funcGetVal(_values[n])) - 2 * D[n] - D[0],
-                    2 * (_funcGetVal(_values[n]) - _funcGetVal(_values[0])) + D[n] + D[0]);
-                return C;
-            }
-            */
             private class CubicValue
             {
                 private float a, b, c, d;
@@ -2236,11 +2122,11 @@ public static partial class ioDriver
             /// Builds PathPoints and PathSegments
             protected override bool BuildPath()
             {
-                var points = new List<T>(m_FrameWaypoints);
+                var points = new List<VecN>(m_FrameVN);
                 if (Closed)
-                    points.Add(m_FrameWaypoints[0]);
-                PathPoints = points.ToArray();
-                PathPointsVN = ToVecNs(PathPoints).ToArray();
+                    points.Add(m_FrameVN[0]);
+                PathPointsVN = points.ToArray();
+                PathPoints = VecN.ToArray<T>(points);
                 m_PathSegments = m_FrameSegments;
                 return true;
             }
@@ -2265,14 +2151,30 @@ public static partial class ioDriver
 
         #region Constructors
 
+        static VecN()
+        {
+            if (!ioDriver.InitDone)
+                ioDriver.Init();
+        }
+
         /// <summary>
-        /// VecN constructor.
+        /// VecN constructor
         /// </summary>
         /// <param name="_vals">Dimension data</param>
         public VecN(params float[] _vals)
         {
             Vals = _vals;
         }
+
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="_source">VecN data to copy for new VecN</param>
+        public VecN(VecN _source)
+        {
+            _source.Vals.CopyTo(Vals, 0);
+        }
+
 
         #endregion Constructors
 
@@ -2465,12 +2367,29 @@ public static partial class ioDriver
             return true;
         }
 
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (var val in Vals)
+                    hash = hash*23 + val.GetHashCode();
+                return hash;
+            }
+            
+        }
+
         /// Convert to type T (T must have constructor defined for this VecN's dim count) 
         /// <seealso cref="Teacher.TeachCoord{T}(int, Teacher.FuncConstruct{T}, Teacher.FuncGetDim{T}[])"/>
         /// <seealso cref="Teacher.TeachCoord{T}(Dictionary{int,Teacher.FuncConstruct{T}}, Teacher.FuncGetDim{T}[])"/>
         public T To<T>()
         {
             return DTypeInfo<T>.Constructs[DimCount](Vals);
+        }
+
+        public static T[] ToArray<T>(IEnumerable<VecN> _points)
+        {
+            return _points.Select(_pt => _pt.To<T>()).ToArray();
         }
 
         /// String representation of this vector
@@ -2482,6 +2401,14 @@ public static partial class ioDriver
                 sb.Append(Vals[idx] + ", ");
             sb.Append(" )");
             return sb.ToString();
+        }
+
+        public static VecN Lerp(VecN _ptA, VecN _ptB, float _pct)
+        {
+            var rslt = new float[_ptA.DimCount];
+            for (int dim = 0; dim < _ptA.DimCount; ++dim)
+                rslt[dim] = ioMath.Lerp(_ptA.Vals[dim], _ptB.Vals[dim], _pct);
+            return new VecN(rslt);
         }
 
         public static float ILerp(VecN _ptA, VecN _ptB, VecN _value)

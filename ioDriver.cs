@@ -4,9 +4,12 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+
 #if ioUNITY
-    using ioDriverUnity;
-#endif 
+
+using ioDriverUnity;
+
+#endif
 
 
 /// <summary>
@@ -15,7 +18,6 @@ using System.Text;
 public static partial class ioDriver
 {
     #region Fields
-
 
     private static Dictionary<string, string> DriverIDsByName = new Dictionary<string, string>();
     private static Dictionary<object, HashSet<string>> DriverIDsByObject = new Dictionary<object, HashSet<string>>
@@ -28,13 +30,11 @@ public static partial class ioDriver
     private static Dictionary<object, Func<float, float>> m_CustomEaseFuncs = new Dictionary<object, Func<float, float>>();
     private static bool m_DebugEnableGlobal = false;
 
-    private static bool m_UnityMgrPresent = false;
-
     private static float m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
     private static float m_TimescaleGlobal = Defaults.Timescale;
-    
-    #endregion Fields
+    private static bool m_UnityMgrPresent = false;
 
+    #endregion Fields
 
     #region Constructors
 
@@ -206,6 +206,7 @@ public static partial class ioDriver
 
     #endregion Enumerations
 
+    #region Delegates
 
     /// Injector delegate used for <see cref="DTransfer{TTar,TDri}.TargetInjector"/> 
     /// and <see cref="DTransfer{TTar,TDri}.DriveInjector"/>
@@ -214,9 +215,7 @@ public static partial class ioDriver
     /// Delegate used for <see cref="OnPump"/> event.
     public delegate void OnPumpAction();
 
-    /// Called every "pump" operation.  Note that this is not fired if not enough time has passed to meet
-    /// the current <see cref="MaxUpdateFrequency"/> setting.
-    public static event OnPumpAction OnPump;
+    #endregion Delegates
 
     #region Nested Interfaces
 
@@ -343,6 +342,14 @@ public static partial class ioDriver
 
     #endregion Nested Interfaces
 
+    #region Events
+
+    /// Fired every "pump" operation.  Note that this is not fired if not enough time has passed to meet
+    /// the current <see cref="MaxUpdateFrequency"/> setting.
+    public static event OnPumpAction OnPump;
+
+    #endregion Events
+
     #region Properties
 
     /// When set to true ALL drivers are debug tracked and will run in Debug mode.  <see cref="DBase.UpdateDebug()"/>
@@ -378,6 +385,31 @@ public static partial class ioDriver
         private set;
     }
 
+    /// Get or set the maximum frequency for ioDriver to pump all running drivers and fire events.
+    /// IE. if the maximum frequency is set to 60 (Hz) then drivers and events will only be updated at a maximum
+    /// of 60 times per second, or maximum once every 16.67 milliseconds.  Cannot be less than or equal to zero.
+    public static float MaxUpdateFrequency
+    {
+        get { return m_MaxUpdateFrequency; }
+        set
+        {
+            var val = value;
+            if (val <= 0)
+            {
+                Log.Err("Maximum Update Frequency cannot be equal to or less than 0.  Setting default of '" +
+                        Defaults.MaxUpdateFrequency + "'");
+                m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
+                return;
+            }
+
+            if (float.IsPositiveInfinity(val))
+            {
+                val = float.MaxValue;
+            }
+            m_MaxUpdateFrequency = val;
+        }
+    }
+
     /// <summary>
     /// Seconds since ioDriver was first initialized.
     /// </summary>
@@ -386,6 +418,11 @@ public static partial class ioDriver
         get { return Hooks.SecsSinceStart(); }
     }
 
+    /// <summary>
+    /// Get / Set ioDriver's global timescale.  All drivers that have their <see cref="DBase{T}.UseTimescaleLocal"/>
+    /// equal to false (default) will use this global timescale when running.
+    /// <seealso cref="Defaults.Timescale"/>
+    /// </summary>
     public static float TimescaleGlobal
     {
         get { return m_TimescaleGlobal; }
@@ -403,31 +440,6 @@ public static partial class ioDriver
         }
     }
 
-    /// Get or set the maximum frequency for ioDriver to pump all running drivers and fire events.
-    /// IE. if the maximum frequency is set to 60 (Hz) then drivers and events will only be updated at a maximum
-    /// of 60 times per second, or maximum once every 16.67 milliseconds.  Cannot be less than or equal to zero.
-    public static float MaxUpdateFrequency
-    {
-        get { return m_MaxUpdateFrequency; }
-        set
-        {
-            var val = value;
-            if (val <= 0)
-            {
-                Log.Err("Maximum Update Frequency cannot be equal to or less than 0.  Setting default of '" +
-                        Defaults.MaxUpdateFrequency + "'");
-                m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
-                return;
-            }
-            
-            if (val == Double.PositiveInfinity)
-            {
-                val = float.MaxValue;
-            }
-            m_MaxUpdateFrequency = val;
-        }
-    }
-    
     #endregion Properties
 
     #region Methods
@@ -438,10 +450,10 @@ public static partial class ioDriver
         return DriversByID.Count;
     }
 
-    /// Gets a list of all drivers in debug track mode.
-    public static List<DBase> DebugGetAllTracked()
+    /// Gets an array of all drivers in debug track mode.
+    public static DBase[] DebugGetAllTracked()
     {
-        return new List<DBase>(DriversDebugTracked);
+        return DriversDebugTracked.ToArray();
     }
 
     /// Destroy all currently running drivers
@@ -451,22 +463,22 @@ public static partial class ioDriver
             driver.Destroy();
     }
 
-    /// Gets a dictionary of all running drivers keyed by their ID.
+    /// Gets a dictionary of all running drivers keyed by <see cref="DBase.ID"/>.
     public static Dictionary<string, DBase> GetAllDriversByID()
     {
         return DriversByID.ToDictionary(_pair => _pair.Key, _pair => _pair.Value);
     }
 
-    /// Gets a dictionary of all running drivers
+    /// Gets a dictionary of all running drivers keyed by <see cref="DBase.Name"/>
     public static Dictionary<string, DBase> GetAllDriversByName()
     {
         return DriversByID.ToDictionary(_pair => _pair.Value.Name, _pair => _pair.Value);
     }
 
     /// <summary>
-    /// Get driver with specified ID.
+    /// Get driver with specified ID or name.  Names are searched first.
     /// </summary>
-    /// <param name="_nameOrID">The Name of ID of the driver to retrieve.</param>
+    /// <param name="_nameOrID">The Name or ID of the driver to retrieve.</param>
     /// <returns>The running driver if found, null otherwise.</returns>
     public static DBase GetDriver(string _nameOrID)
     {
@@ -483,7 +495,7 @@ public static partial class ioDriver
     /// <returns>HashSet of driver IDs currently associated with the target object.</returns>
     public static HashSet<string> GetDriverIDsOnTarget(object _target)
     {
-        return DriverIDsByObject[_target];
+        return DriverIDsByObject.ContainsKey(_target) ? DriverIDsByObject[_target] : new HashSet<string>();
     }
 
     /// <summary>
@@ -511,11 +523,10 @@ public static partial class ioDriver
         //Initialize Events
         Event.Init();
 
-
-#if ioUNITY
+        #if ioUNITY
         //Initialize Unity Manager
         ioDriverUnityManager.Init();
-#endif
+        #endif
         Log.Info("ioDriver Initialized");
     }
 
@@ -527,7 +538,10 @@ public static partial class ioDriver
     /// <typeparam name="T">Value type</typeparam>
     /// <param name="_value">Input value</param>
     /// <returns>Output value</returns>
-    public static T InjectorPassthrough<T>(T _value) { return _value; }
+    public static T InjectorPassthrough<T>(T _value)
+    {
+        return _value;
+    }
 
     /// <summary>
     /// Pump all running drivers.
@@ -550,6 +564,22 @@ public static partial class ioDriver
     }
 
     /// <summary>
+    /// Set the methods to be called for ioDriver's log functions. 
+    /// <seealso cref="Log.Err"/>
+    /// <seealso cref="Log.Warn"/>
+    /// <seealso cref="Log.Info"/>
+    /// </summary>
+    /// <param name="_logInfoMethod">Method for "info" level reporting.</param>
+    /// <param name="_logWarnMethod">Method for "warning" level reporting.</param>
+    /// <param name="_logErrMethod">Method for "error" level reporting.</param>
+    public static void SetLogMethods(Action<string> _logInfoMethod, Action<string> _logWarnMethod, Action<string> _logErrMethod)
+    {
+        Log.LogInfoMethod = _logInfoMethod;
+        Log.LogWarnMethod = _logWarnMethod;
+        Log.LogErrMethod = _logErrMethod;
+    }
+
+    /// <summary>
     /// Stops and disposes the specified driver on its next update call.
     /// </summary>
     /// <param name="_nameOrID">Name or ID of the driver to stop.</param>
@@ -562,19 +592,6 @@ public static partial class ioDriver
             return;
         }
         Log.Err("Stop driver '" + _nameOrID + "' failed.  Name/ID not found.");
-    }
-
-    /// <summary>
-    /// Set the methods to be called for ioDriver's log functions.
-    /// </summary>
-    /// <param name="_logInfoMethod">Method for "info" level reporting.</param>
-    /// <param name="_logWarnMethod">Method for "warning" level reporting.</param>
-    /// <param name="_logErrMethod">Method for "error" level reporting.</param>
-    public static void SetLogMethods(Action<string> _logInfoMethod, Action<string> _logWarnMethod, Action<string> _logErrMethod)
-    {
-        Log.LogInfoMethod = _logInfoMethod;
-        Log.LogWarnMethod = _logWarnMethod;
-        Log.LogErrMethod = _logErrMethod;
     }
 
     private static object EvalExpr(Expression e)
@@ -782,25 +799,23 @@ public static partial class ioDriver
 
         private readonly Dictionary<string, Func<object>> m_CustomDebugInfo;
 
+        // TODO improve this?
         private static ulong m_CurAutoNameNum = 0;
 
         private bool m_Dispose;
-
-        private float m_TimescaleLocal;
-
-        /// If set to true the driver will not drive nor will it account for any time passage.
         private bool m_Paused;
         private object m_Tag;
 
         /// Backing field for <see cref="TargetInfo"/>
         private TargetInfo m_TargetInfo;
+        private float m_TimescaleLocal;
 
         #endregion Fields
 
         #region Constructors
 
         /// <summary>
-        /// Base driver by action constructor.
+        /// Base driver constructor.
         /// </summary>
         /// Note:  Target Object will be set to <see cref="ioDriver.TargetInfo.TARGET_NONE"/> and no conflict check will be made.  Set <see cref="TargetObject"/> to enable conflict detection.
         /// <param name="_name">Name to assign to this driver.</param>
@@ -909,23 +924,8 @@ public static partial class ioDriver
             protected set;
         }
 
-        /// Get/Set driver's local timescale.  Not used if <see cref="UseTimescaleLocal"/> is set to false (default).  Setting this also sets <see cref="UseTimescaleLocal"/> to true;
-        public float TimescaleLocal
-        {
-            get { return m_TimescaleLocal; }
-            set
-            {
-                if (m_TimescaleLocal == value) return;
-                if (value < 0)
-                {
-                    Log.Err("Driver local timescale cannot be less than zero.  Setting to default of '" + Defaults.Timescale + "'");
-                    m_TimescaleLocal = Defaults.Timescale;
-                }
-                m_TimescaleLocal = value;
-            }
-        }
-
-        /// User defined name.  Set to ID if not user set.  Must be unique among all running drivers.
+        /// User defined name.  Must be unique among all running drivers.  If not specified in the contructor will be
+        /// automatically assigned.
         public string Name
         {
             get;
@@ -938,9 +938,10 @@ public static partial class ioDriver
             get { return "Base"; }
         }
 
-        /// Set the pause state for this driver.  Pause events 
+        /// Get / Set the pause state for this driver.  Pause events 
         /// will not fire if the driver has not been started, 
         /// has been cancelled or has finished.
+        /// If set to true the driver will not drive nor will it account for any time passage.
         public bool Paused
         {
             get { return m_Paused; }
@@ -1019,7 +1020,7 @@ public static partial class ioDriver
             }
         }
 
-        /// General target information for this driver.  Used for collisions, tracking with objects and debug.
+        /// General target information for this driver.  Intended for collisions, tracking with objects and debug.
         public TargetInfo TargetInfo
         {
             get { return m_TargetInfo; }
@@ -1038,6 +1039,22 @@ public static partial class ioDriver
         public object TargetObject
         {
             get { return m_TargetInfo.TargetObject; }
+        }
+
+        /// Get/Set driver's local timescale.  Not used if <see cref="UseTimescaleLocal"/> is set to false (default).  Setting this also sets <see cref="UseTimescaleLocal"/> to true;
+        public float TimescaleLocal
+        {
+            get { return m_TimescaleLocal; }
+            set
+            {
+                if (m_TimescaleLocal == value) return;
+                if (value < 0)
+                {
+                    Log.Err("Driver local timescale cannot be less than zero.  Setting to default of '" + Defaults.Timescale + "'");
+                    m_TimescaleLocal = Defaults.Timescale;
+                }
+                m_TimescaleLocal = value;
+            }
         }
 
         /// Set to true to use local timescale mode, false to use global timescale. <seealso cref="DBase.TimescaleLocal"/> <seealso cref="TimescaleGlobal"/>
@@ -1061,6 +1078,8 @@ public static partial class ioDriver
             m_CustomDebugInfo.Add(_name, _result);
         }
 
+
+
         /// <summary>
         /// Add an event that will be fired after a specified amount of time has passed.
         /// </summary>
@@ -1068,6 +1087,7 @@ public static partial class ioDriver
         /// <param name="_seconds">Event will fire when <see cref="ElapsedTime"/> reaches _seconds.</param>
         /// <param name="_action">Event action</param>
         /// <param name="_id">Event ID</param>
+        /// <returns>Created event's interface</returns>
         public IEvent AddEventTimed<T>(float _seconds, Event.Handler<T> _action, string _id = null)
             where T : DBase
         {
@@ -1089,7 +1109,7 @@ public static partial class ioDriver
         /// <param name="_condition">Condition function</param>
         /// <param name="_action">Event action</param>
         /// <param name="_id">Event ID</param>
-        /// <returns>Created event</returns>
+        /// <returns>Created event's interface</returns>
         public IEvent AddEventUser<T>(Event.Condition _condition, Event.Handler<T> _action, string _id = null)
             where T : DBase
         {
@@ -1126,7 +1146,7 @@ public static partial class ioDriver
         /// <returns>Debug function result</returns>
         public object GetCustomDebug(string _name)
         {
-            return m_CustomDebugInfo[_name]().ToString();
+            return m_CustomDebugInfo[_name]();
         }
 
         /// <summary>
@@ -1137,7 +1157,7 @@ public static partial class ioDriver
         {
             return new Dictionary<string, Func<object>>(m_CustomDebugInfo);
         }
-        
+
         /// <summary>
         /// Pause this driver for specified amount of time in seconds.
         /// </summary>
@@ -1184,7 +1204,7 @@ public static partial class ioDriver
             Cancelled = false;
         }
 
-        /// String representation of Driver. (NiceType:Name:ID)
+        /// String representation of Driver. (Name, ID, NiceType, TargetInfo)
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -1195,7 +1215,12 @@ public static partial class ioDriver
             return sb.ToString();
         }
 
-        /// Define for driver core functionality
+        internal static void InitManager()
+        {
+            Manager.Init();
+        }
+
+        /// Override for driver core functionality
         protected virtual void Update()
         {
         }
@@ -1205,11 +1230,6 @@ public static partial class ioDriver
         protected virtual void UpdateDebug()
         {
             Update();
-        }
-
-        internal static void InitManager()
-        {
-            Manager.Init();
         }
 
         private string AutoName()
@@ -1259,6 +1279,7 @@ public static partial class ioDriver
 
         private static class Manager
         {
+            // TODO Use a more accurate time measure?
             private static readonly long m_TicksAtStart = System.DateTime.Now.Ticks;
             private static float m_LastUpdateTimestamp;
             private static Queue<DBase> m_StartQueue;
@@ -1292,8 +1313,6 @@ public static partial class ioDriver
                     return;
                 }
 
-
-
                 var timeStamp = GetTimestampInSecs();
                 var secsSinceLastUpdate = (timeStamp - m_LastUpdateTimestamp) * TimescaleGlobal;
 
@@ -1304,13 +1323,10 @@ public static partial class ioDriver
                     secsSinceLastUpdate = 0;
                 }
 
-                var foo = 1f / MaxUpdateFrequency;
-                if (secsSinceLastUpdate < foo) return;
-
+                if (secsSinceLastUpdate < 1f / MaxUpdateFrequency) return;
 
                 if (OnPump != null) OnPump();
                 Hooks.ProcessEvents();
-
 
                 var toDispose = new List<string>();
 
@@ -1329,7 +1345,6 @@ public static partial class ioDriver
                     Dispose(id);
                 while (m_StartQueue.Count > 0)
                     Manage(m_StartQueue.Dequeue());
-
             }
 
             public static void Start(DBase _driver)
@@ -1397,7 +1412,6 @@ public static partial class ioDriver
                             sb.AppendLine(" New driver name: " + _newDriver.Name);
                             Log.Info(sb.ToString(), Debug.ReportConflict);
                             return ConflictCheck(_newDriver);
-                            break;
                         case ConflictBehavior.Replace:
                             sb.AppendLine("Cancelling current driver and replacing.");
                             Log.Info(sb.ToString(), Debug.ReportConflict);
@@ -1409,7 +1423,7 @@ public static partial class ioDriver
                             Log.Info(sb.ToString(), Debug.ReportConflict);
                             return null;
                         default:
-                            throw new ArgumentOutOfRangeException();
+                            return null;
                     }
                 }
 
@@ -1442,14 +1456,14 @@ public static partial class ioDriver
                                 Log.Info(sb.ToString(), Debug.ReportConflict);
                                 return null;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                return null;
                         }
                     }
                 }
                 return Track(_newDriver);
             }
 
-            public static float GetTimestampInSecs()
+            private static float GetTimestampInSecs()
             {
                 var ticks = DateTime.Now.Ticks - m_TicksAtStart;
                 var ticksPerMs = TimeSpan.TicksPerMillisecond;
@@ -1501,17 +1515,17 @@ public static partial class ioDriver
     {
         #region Fields
 
-        /// Report error messages
-        public static bool ReportErrorMessages = true;
-
-        /// Report informational messages
-        public static bool ReportInfoMessages = false;
-
         /// Report driver conflicts (override)
         public static bool ReportConflict = false;
 
+        /// Report error messages
+        public static bool ReportErrorMessages = true;
+
         /// Report event messages (override)
         public static bool ReportEvents = false;
+
+        /// Report informational messages
+        public static bool ReportInfoMessages = false;
 
         /// Report warning messages
         public static bool ReportWarnMessages = true;
@@ -1540,6 +1554,9 @@ public static partial class ioDriver
     {
         #region Fields
 
+        /// Default control magnitude, as percent of incoming segment length.  <seealso cref="Path.Bezier{T}.Control"/>
+        public static float BezierMagPct = 0.33f;
+
         /// <summary>Default behavior when a conflict is detected. <seealso cref="ConflictBehavior"/><seealso cref="DBase.conflictBehavior"/></summary>
         public static ConflictBehavior conflictBehavior = ConflictBehavior.Replace;
 
@@ -1551,11 +1568,24 @@ public static partial class ioDriver
 
         /// <summary>Default ease type for easable driver types. <seealso cref="EaseType"/></summary>
         public static EaseType easeType = EaseType.Linear;
-        
+
         /// Default managed event priority. <seealso cref="IEvent.Priority"/><seealso cref="IEvent.SetPriority"/>
         public static uint EventPriority = 10;
 
+        /// Default maximum update frequency.  <seealso cref="ioDriver.MaxUpdateFrequency"/>
+        public static float MaxUpdateFrequency = float.MaxValue;
+
+        /// <summary>Default tag.  <seealso cref="DBase.Tag"/></summary>
+        public static object Tag = "NO TAG";
+
+        /// <summary>Default timescale behavior. <seealso cref="DBase.UseTimescaleLocal"/></summary>
+        public static bool UseTimescaleLocal = false;
+
         private static float m_Timescale = 1;
+
+        #endregion Fields
+
+        #region Properties
 
         /// <summary>Default timescale.  Cannot be less than 0.</summary>
         public static float Timescale
@@ -1572,23 +1602,9 @@ public static partial class ioDriver
                 }
                 m_Timescale = value;
             }
-        
         }
 
-        /// <summary>Default tag.  <seealso cref="DBase.Tag"/></summary>
-        public static object Tag = "NO TAG";
-
-        /// <summary>Default timescale behavior. <seealso cref="DBase.UseTimescaleLocal"/></summary>
-        public static bool UseTimescaleLocal = false;
-
-        /// Default control magnitude, as percent of incoming segment length.  <seealso cref="Path.Bezier{T}.Control"/>
-        public static float BezierMagPct = 0.33f;
-
-        /// Default maximum update frequency.  <seealso cref="ioDriver.MaxUpdateFrequency"/>
-        public static float MaxUpdateFrequency = float.MaxValue;
-
-        #endregion Fields
-
+        #endregion Properties
     }
 
     /// <summary>
@@ -1610,7 +1626,8 @@ public static partial class ioDriver
         /// <summary>
         /// Base driver by action constructor.
         /// </summary>
-        /// Note:  Target Object will be set to <see cref="TargetInfo.TARGET_NONE"/> and no conflict check will be made.  Set <see cref="DBase.TargetObject"/> to enable conflict detection.
+        /// Note:  Target Object will be set to <see cref="TargetInfo.TARGET_NONE"/> and no conflict check will be made.  
+        /// Set <see cref="DBase.TargetObject"/> to enable conflict detection.
         /// <param name="_tarAction">Target action</param>
         /// <param name="_driver">Drive Function</param>
         /// <param name="_name">Name to assign to this driver.</param>
@@ -1668,6 +1685,22 @@ public static partial class ioDriver
         #endregion Constructors
 
         #region Properties
+
+        /// Gets current value from the <see cref="Driver"/> function,
+        /// pulled during last update <see cref="Pump"/>.  Will reflect any changes
+        /// made in the <see cref="DriveInjector"/>.
+        public TDri CurrentDriveVal
+        {
+            get; private set;
+        }
+
+        /// Gets current value from <see cref="DriveToTarget"/> pulled
+        /// during last update <see cref="Pump"/>.  Will reflect any changes
+        /// made in the <see cref="TargetInjector"/>.
+        public TTar CurrentTargetVal
+        {
+            get; private set;
+        }
 
         /// Sets the drive injector for this driver.
         /// Allows custom code to be run between <see cref="Driver"/> and
@@ -1728,16 +1761,6 @@ public static partial class ioDriver
             }
         }
 
-        /// Gets current value from the <see cref="Driver"/> function,
-        /// pulled during last update <see cref="Pump"/>.  Will reflect any changes
-        /// made in the <see cref="DriveInjector"/>.
-        public TDri CurrentDriveVal { get; private set; }
-
-        /// Gets current value from <see cref="DriveToTarget"/> pulled
-        /// during last update <see cref="Pump"/>.  Will reflect any changes
-        /// made in the <see cref="TargetInjector"/>.
-        public TTar CurrentTargetVal { get; private set; }
-
         Type ITransfer.DriveType
         {
             get { return typeof(TDri); }
@@ -1787,12 +1810,6 @@ public static partial class ioDriver
             CurrentDriveVal = DriveInjector(Driver());
             CurrentTargetVal = TargetInjector(DriveToTarget(CurrentDriveVal));
             TarAction(CurrentTargetVal);
-        }
-
-        /// Override this method to add any additional debug code.  Optional - base calls Update()
-        protected override void UpdateDebug()
-        {
-            Update();
         }
 
         #endregion Methods
@@ -1898,7 +1915,7 @@ public static partial class ioDriver
                 case EaseType.EaseInOutElastic:
                     return (EaseInOutElastic);
                 default:
-                    throw new NotImplementedException();
+                    return Linear;
             }
         }
 
@@ -2132,9 +2149,9 @@ public static partial class ioDriver
     /// </summary>
     /// NOTE: Drivers created with <see cref="DBase">Action{T}</see> type methods will have their target object set as <see cref="TARGET_NONE"/>.
     /// To enable conflict checks for drives created in this manner, set <see cref="TargetObject"/>
-    //TODO Overhaul this - All not needed for DTransfer
     public class TargetInfo : IEquatable<TargetInfo>
     {
+        //TODO Overhaul this - All not needed for DTransfer
         #region Fields
 
         /// <summary>Drivers created without a specified target object are keyed by this object.</summary><seealso cref="DBase.TargetObject"/>
@@ -2280,10 +2297,12 @@ public static partial class ioDriver
     {
         #region Fields
 
-        private const string LOG_ID = "ioDriver";
+        public static Action<string> LogErrMethod;
         public static Action<string> LogInfoMethod;
         public static Action<string> LogWarnMethod;
-        public static Action<string> LogErrMethod;
+
+        private const string LOG_ID = "ioDriver";
+
         #endregion Fields
 
         #region Methods

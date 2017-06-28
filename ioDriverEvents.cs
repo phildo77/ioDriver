@@ -357,6 +357,10 @@ public static partial class ioDriver
 			return EventMgr.Add(_condition, _evt => _eventAction(), 1, Defaults.EventPriority, DESC_USER_EVENT, _id);
 		}
 
+        /// <summary>
+        /// Remove event with specified ID.
+        /// </summary>
+        /// <param name="_id">ID of event to remove</param>
 	    public static void Remove(string _id)
 	    {
 	        var evt = EventMgr.GetEvent(_id);
