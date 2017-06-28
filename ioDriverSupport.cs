@@ -249,5 +249,10 @@ public static partial class ioMath
             return diff / (absA + absB) < epsilon;
     }
 
+    public static float Lerp(float _a, float _b, float _pct)
+    {
+        return _a + (_b - _a) * _pct;
+    }
+
 }
 
