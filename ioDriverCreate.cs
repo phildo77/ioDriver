@@ -92,25 +92,25 @@ public static partial class ioDriver
         return new DTweenPath<TTar>(_targetExpression, _path, _cycleDuration, _name);
     }
 
-    /// Shorthand mapped driver constructor.  <seealso cref="DMappedSimple"/>
+    /// Shorthand mapped driver constructor.  <seealso cref="DMappedSimple{TTar,TDri}"/>
     public static DMappedSimple<TTar, TDri> Map<TTar, TDri>(Action<TTar> _targetAction, TTar _targetMapA, TTar _targetMapB, Func<TDri> _driverMethod, TDri _mapDriveA, TDri _mapDriveB, string _name = null)
     {
         return new DMappedSimple<TTar, TDri>(_targetAction, _targetMapA, _targetMapB, _driverMethod, _mapDriveA, _mapDriveB, _name);
     }
 
-    /// Shorthand mapped driver constructor.  <seealso cref="DMappedSimple"/>
+    /// Shorthand mapped driver constructor.  <seealso cref="DMappedSimple{TTar,TDri}"/>
     public static DMappedSimple<TTar, TDri> Map<TTar, TDri>(Expression<Func<TTar>> _targetExpr, TTar _targetMapA, TTar _targetMapB, Func<TDri> _driverMethod, TDri _driveMapA, TDri _driveMapB, string _name = null)
     {
         return new DMappedSimple<TTar, TDri>(_targetExpr, _targetMapA, _targetMapB, _driverMethod, _driveMapA, _driveMapB, _name);
     }
 
-    /// Shorthand mapped path driver constructor.  <seealso cref="DMappedPath"/>
+    /// Shorthand mapped path driver constructor.  <seealso cref="DMappedPath{TTar,TDri}"/>
     public static DMappedPath<TTar, TDri> Map<TTar, TDri>(Action<TTar> _targetAction, Path.Base<TTar> _path, Func<TDri> _driverMethod, TDri _mapDriveA, TDri _mapDriveB, string _name = null)
     {
         return new DMappedPath<TTar, TDri>(_targetAction, _path, _driverMethod, _mapDriveA, _mapDriveB, _name);
     }
 
-    /// Shorthand mapped path driver constructor.  <seealso cref="DMappedPath"/>
+    /// Shorthand mapped path driver constructor.  <seealso cref="DMappedPath{TTar,TDri}"/>
     public static DMappedPath<TTar, TDri> Map<TTar, TDri>(Expression<Func<TTar>> _targetExpr, Path.Base<TTar> _path, Func<TDri> _driverMethod, TDri _driveMapA, TDri _driveMapB, string _name = null)
     {
         return new DMappedPath<TTar, TDri>(_targetExpr, _path, _driverMethod, _driveMapA, _driveMapB, _name);
@@ -572,18 +572,21 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
+    /// Fluency method. See <see cref="ioDriver.Path.Spline{T}.ModePCPointCount"/>
     public static T SetModePCPointCount<T>(this T _spline, int _pointCount) where T : ioDriver.ISpline
     {
         _spline.ModePCPointCount = _pointCount;
         return _spline;
     }
 
+    /// Fluency method. See <see cref="ioDriver.Path.Spline{T}.ModeMAMinAngle"/>
     public static T SetModeMAMinAngle<T>(this T _spline, float _minAngle) where T : ioDriver.ISpline
     {
         _spline.ModeMAMinAngle = _minAngle;
         return _spline;
     }
 
+    /// Fluency method. See <see cref="ioDriver.Path.Spline{T}.ModeMAMinLength"/>
     public static T SetModeMAMinLength<T>(this T _spline, float _length) where T : ioDriver.ISpline
     {
         _spline.ModeMAMinLength = _length;

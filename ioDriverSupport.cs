@@ -3,9 +3,54 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using System.Diagnostics;
 
 public static partial class ioDriver
 {
+    /// <summary>
+    /// Basic profiler functionality (time of execution)
+    /// </summary>
+    public static class Profile
+    {
+        private static Dictionary<string, Tuple<string, Stopwatch>> m_ProfilerData =
+            new Dictionary<string, Tuple<string, Stopwatch>>();
+
+        /// Begin profile timer with specified label.
+        public static void Begin(string _label)
+        {
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+            if (m_ProfilerData.ContainsKey(_label))
+            {
+                Log.Err("Profiler already contains key: " + _label);
+                return;
+            }
+            m_ProfilerData.Add(_label, new Tuple<string, Stopwatch>(_label, watch));
+        }
+
+        /// End profiling with specified label and report result via <see cref="Log.Info"/>.
+        public static void End(string _label)
+        {
+            if (m_ProfilerData.ContainsKey(_label))
+            {
+                Log.Err("Profiler does not contain key: " + _label);
+                return;
+            }
+
+            var data = m_ProfilerData[_label];
+            m_ProfilerData.Remove(_label);
+
+
+            data.Second.Stop();
+            var ticks = data.Second.ElapsedTicks;
+            var freq = Stopwatch.Frequency;
+            var isHR = Stopwatch.IsHighResolution;
+
+            var ms = (decimal)ticks / freq * 1000;
+
+            Log.Info(data.First + " : " + ms.ToString("0.######") + " ms --- Ticks: " + ticks + "  ---- isHR : " + isHR);
+        }
+    }
 
     /// <summary>
     /// Class that allows chaining and branching of multiple drivers.
@@ -249,6 +294,13 @@ public static partial class ioMath
             return diff / (absA + absB) < epsilon;
     }
 
+    /// <summary>
+    /// Linearly interpolate line defined by specified points at specified percent.  Does not clamp.
+    /// </summary>
+    /// <param name="_a">Line definition point A</param>
+    /// <param name="_b">Line definition point B</param>
+    /// <param name="_pct">Percent target for interpolation</param>
+    /// <returns>Lerp result</returns>
     public static float Lerp(float _a, float _b, float _pct)
     {
         return _a + (_b - _a) * _pct;

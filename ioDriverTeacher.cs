@@ -17,6 +17,8 @@ public static partial class ioDriver
 
         private static Dictionary<Type, HashSet<TeachType>> m_TaughtTypes;
 
+
+        /// Get a dictionary containing sets of known taught functions indexed by Type.
         public static Dictionary<Type, HashSet<TeachType>> TaughtTypes
         {
             get
@@ -118,7 +120,8 @@ public static partial class ioDriver
         public static float Lerpf(float _from, float _to, float _pct) { return (_from + (_to - _from) * _pct); }
         /// Basic ILERP float function: (_val - _from) / (_to - _from)
         public static float ILerpf(float _from, float _to, float _val) { return (_val - _from) / (_to - _from); }
-
+        
+        /// Delegate for getting T object's zero equivalent.
         public delegate T FuncZero<out T>();
 
         /// <summary>
@@ -383,6 +386,7 @@ public static partial class ioDriver
 
         }
 
+        /// Retrieve a list of known Teacher functions for specified type.
         public static List<TeachType> GetKnownTaughtFrom(Type _type)
         {
             var known = new List<TeachType>();
@@ -411,7 +415,7 @@ public static partial class ioDriver
             }
             catch (Exception _e)
             {
-                Log.Err("Exception on type: " + type.ToString());
+                Log.Err("Exception on type: " + type.ToString() + " | Exception: " + _e.ToString());
             }
 
             var dimsLen = ((Array)getDims.GetValue(type)).Length;
@@ -432,13 +436,20 @@ public static partial class ioDriver
              * */
         }
 
+        /// Teachable function types
         public enum TeachType
         {
+            /// See <see cref="FuncAdd{T}"/>
             Add,
+            /// See <see cref="FuncConstruct{T}"/> and <see cref="FuncGetDim{T}"/>
             Coord,
+            /// See <see cref="FuncILerp{T}"/>
             ILerp,
+            /// See <see cref="FuncLength{T}"/>
             Length,
+            /// See <see cref="FuncLerp{T}"/>
             Lerp,
+            /// See <see cref="FuncZero{T}"/>
             Zero
         }
 

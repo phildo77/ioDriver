@@ -419,7 +419,7 @@ public static partial class ioDriver
     }
 
     /// <summary>
-    /// Get / Set ioDriver's global timescale.  All drivers that have their <see cref="DBase{T}.UseTimescaleLocal"/>
+    /// Get / Set ioDriver's global timescale.  All drivers that have their <see cref="DBase.UseTimescaleLocal"/>
     /// equal to false (default) will use this global timescale when running.
     /// <seealso cref="Defaults.Timescale"/>
     /// </summary>
@@ -813,6 +813,11 @@ public static partial class ioDriver
         #endregion Fields
 
         #region Constructors
+
+        static DBase()
+        {
+            ioDriver.Init();
+        }
 
         /// <summary>
         /// Base driver constructor.
@@ -1284,6 +1289,11 @@ public static partial class ioDriver
             private static float m_LastUpdateTimestamp;
             private static Queue<DBase> m_StartQueue;
 
+            static Manager()
+            {
+                ioDriver.Init();
+            }
+
             public static void Init()
             {
                 m_StartQueue = new Queue<DBase>();
@@ -1349,7 +1359,7 @@ public static partial class ioDriver
 
             public static void Start(DBase _driver)
             {
-                ioDriver.Init();
+                //ioDriver.Init();
                 if (!_driver.m_Dispose) m_StartQueue.Enqueue(_driver);
             }
 
@@ -2213,11 +2223,13 @@ public static partial class ioDriver
 
         #region Methods
 
+        /// Inequality operator
         public static bool operator !=(TargetInfo _a, TargetInfo _b)
         {
             return !(_a == _b);
         }
 
+        /// Equality operator
         public static bool operator ==(TargetInfo _a, TargetInfo _b)
         {
             if (ReferenceEquals(null, _a) && ReferenceEquals(null, _b)) return true;
@@ -2227,6 +2239,7 @@ public static partial class ioDriver
             return _a.Equals(_b);
         }
 
+        /// Equality operator
         public bool Equals(TargetInfo _p)
         {
             if (ReferenceEquals(null, _p)) return false;
@@ -2244,6 +2257,7 @@ public static partial class ioDriver
             return true;
         }
 
+        /// Equality operator
         public override bool Equals(object _obj)
         {
             if (ReferenceEquals(null, _obj)) return false;
@@ -2251,15 +2265,21 @@ public static partial class ioDriver
             return Equals(_obj as TargetInfo);
         }
 
+        /// Hash Code calculation
         public override int GetHashCode()
         {
-            int hash = 27;
-            hash = hash * 13 + TargetObject.GetHashCode();
-            hash = hash * 13 + MetaName.GetHashCode();
-            hash = hash * 13 + MetaDesc.GetHashCode();
-            return hash;
+            unchecked
+            {
+                int hash = 27;
+                hash = hash * 13 + TargetObject.GetHashCode();
+                hash = hash * 13 + MetaName.GetHashCode();
+                hash = hash * 13 + MetaDesc.GetHashCode();
+                return hash;
+            }
+            
         }
 
+        /// Readable description of TargetInfo's data
         public override string ToString()
         {
             return TargetObject.ToString() + " : " + MetaName.ToString() + " : " + MetaDesc.ToString();

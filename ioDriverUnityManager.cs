@@ -210,11 +210,27 @@ namespace ioDriverUnity
             return ioDriver.Tween(() => _thisGo.transform.lossyScale, _thisGo.transform.localScale, _to, _duration);
         }
 
+        /// <summary>
+        /// Create <see cref="ioDriver.DTweenPath{TTar}">tween</see> driver configured to tween gameobject along specified path.
+        /// </summary>
+        /// <param name="_go">Target GameObject</param>
+        /// <param name="_path">Path to tween along</param>
+        /// <param name="_duration">Set Duration of tween</param>
+        /// <param name="_name">Set Name of Tween driver</param>
+        /// <returns>Configured tween driver</returns>
         public static ioDriver.DTweenPath<Vector3> ioTweenPath(this GameObject _go, ioDriver.Path.Base<Vector3> _path, float _duration, string _name = null)
         {
             return ioDriver.Tween(() => _go.transform.position, _path, _duration, _name);
         }
 
+        /// <summary>
+        /// Create <see cref="ioDriver.DTweenPath{TTar}">tween</see> driver configured to tween specified GameObject along path.
+        /// </summary>
+        /// <param name="_go">Target GameObject</param>
+        /// <param name="_path">Path to tween along</param>
+        /// <param name="_duration">Set Duration of tween</param>
+        /// <param name="_name">Set Name of Tween driver</param>
+        /// <returns>Configured tween driver</returns>
         public static ioDriver.DTweenPath<Vector3> Tween(this ioDriver.Path.Base<Vector3> _path, GameObject _go,
             float _duration, string _name = null)
         {
@@ -312,6 +328,7 @@ namespace ioDriverUnity
                     {
                         GameObject umGO = new GameObject("ioDriverUnityManager");
                         m_Instance = umGO.AddComponent<ioDriverUnityManager>();
+                        m_Instance.m_Enabled = true;
                         umGO.hideFlags = HideFlags.DontSaveInBuild | HideFlags.DontSaveInEditor;
                     }
                 }
@@ -540,12 +557,7 @@ namespace ioDriverUnity
             ioDriver.Teacher.TeachCoord(constrsClr, _vec => _vec.r, _vec => _vec.g, _vec => _vec.b, _vec => _vec.a);
 
         }
-
-        void Awake()
-        {
-            Enabled = true;
-        }
-
+        
         private void OnDestroy()
         {
             applicationIsQuitting = true;

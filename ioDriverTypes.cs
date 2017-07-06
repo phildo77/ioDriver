@@ -78,11 +78,14 @@ public static partial class ioDriver
 		}
 
 
-		/// <summary>
-		/// Mapped driver constructor. <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_driverMapA">Drive map point A.</param>
-		/// <param name="_driverMapB">Drive map point B.</param>
+        /// <summary>
+        /// Mapped driver constructor. <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_driverMapA">Drive map point A.</param>
+        /// <param name="_driverMapB">Drive map point B.</param>
+		/// <param name="_tarAction"></param>
+		/// <param name="_driver"></param>
+		/// <param name="_name"></param>
 		protected DMapped(Action<TTar> _tarAction, Func<TDri> _driver, TDri _driverMapA, TDri _driverMapB, string _name = null)
 			: base(_tarAction, _driver, _name)
 		{
@@ -92,11 +95,14 @@ public static partial class ioDriver
 			m_DriveMapTo = _driverMapB;
 		}
 
-		/// <summary>
-		/// Mapped driver constructor. <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_driverMapA">Drive map point A.</param>
-		/// <param name="_driverMapB">Drive map point B.</param>
+        /// <summary>
+        /// Mapped driver constructor. <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_driverMapA">Drive map point A.</param>
+        /// <param name="_driverMapB">Drive map point B.</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_driver"></param>
+		/// <param name="_name"></param>
 		protected DMapped(Expression<Func<TTar>> _targetExpr, Func<TDri> _driver, TDri _driverMapA, TDri _driverMapB, string _name = null)
 			: base(_targetExpr, _driver, _name)
 		{
@@ -228,12 +234,17 @@ public static partial class ioDriver
 		public override string NiceType { get { return "MappedSimple<" + typeof(TTar) + "," + typeof(TDri) + ">"; } }
 
 
-		/// <summary>
-		/// Simple mapped action constructor.
-		/// <seealso cref="DMapped{TTar,TDri}"/>
-		/// </summary>
-		/// <param name="_from">Target value to map to Driver Map Point A</param>
-		/// <param name="_to">Target value to map to Driver Map Point B</param>
+        /// <summary>
+        /// Simple mapped action constructor.
+        /// <seealso cref="DMapped{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_from">Target value to map to Driver Map Point A</param>
+        /// <param name="_to">Target value to map to Driver Map Point B</param>
+		/// <param name="_tarAction"></param>
+		/// <param name="_driver"></param>
+		/// <param name="_driverMapA"></param>
+		/// <param name="_driverMapB"></param>
+		/// <param name="_name"></param>
 		public DMappedSimple(Action<TTar> _tarAction, TTar _from, TTar _to, Func<TDri> _driver, TDri _driverMapA, TDri _driverMapB, string _name = null)
 			: base(_tarAction, _driver, _driverMapA, _driverMapB, _name)
 		{
@@ -242,12 +253,17 @@ public static partial class ioDriver
 			m_To = _to;
 		}
 
-		/// <summary>
-		/// Simple mapped expression constructor.
-		/// <seealso cref="DMapped{TTar,TDri}"/>
-		/// </summary>
-		/// <param name="_from">Target value to map to Driver Map Point A</param>
-		/// <param name="_to">Target value to map to Driver Map Point B</param>
+        /// <summary>
+        /// Simple mapped expression constructor.
+        /// <seealso cref="DMapped{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_from">Target value to map to Driver Map Point A</param>
+        /// <param name="_to">Target value to map to Driver Map Point B</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_driver"></param>
+		/// <param name="_driverMapA"></param>
+		/// <param name="_driverMapB"></param>
+		/// <param name="_name"></param>
 		public DMappedSimple(Expression<Func<TTar>> _targetExpr, TTar _from, TTar _to, Func<TDri> _driver, TDri _driverMapA, TDri _driverMapB, string _name = null)
 			: base(_targetExpr, _driver, _driverMapA, _driverMapB, _name)
 		{
@@ -321,22 +337,26 @@ public static partial class ioDriver
 		/// Get string representation of driver type
 		public override string NiceType { get { return "Rate<" + typeof(TTar) + ">"; } }
 
-		/// <summary>
-		/// Rate driver action constructor.
-		/// <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_ratePerSec">Rate per second</param>
+        /// <summary>
+        /// Rate driver action constructor.
+        /// <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_ratePerSec">Rate per second</param>
+		/// <param name="_tarAction"></param>
+		/// <param name="_name"></param>
 		public DRate(Action<TTar> _tarAction, Func<TTar> _ratePerSec, string _name = null)
 			: base(_tarAction, _ratePerSec, _name)
 		{
 			DoCache();
 		}
 
-		/// <summary>
-		/// Rate driver expression constructor.
-		/// <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_ratePerSec">Rate per second</param>
+        /// <summary>
+        /// Rate driver expression constructor.
+        /// <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_ratePerSec">Rate per second</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_name"></param>
 		public DRate(Expression<Func<TTar>> _targetExpr, Func<TTar> _ratePerSec, string _name = null)
 			: base(_targetExpr, _ratePerSec, _name)
 		{
@@ -388,11 +408,13 @@ public static partial class ioDriver
 		/// </summary>
 		public LoopType loopType { get; private set; }
 
-		/// <summary>
-		/// Base speed by action constructor.
-		/// <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_speedDriver">Function that provides this driver's speed value.  Read from on each update call.</param>
+        /// <summary>
+        /// Base speed by action constructor.
+        /// <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_speedDriver">Function that provides this driver's speed value.  Read from on each update call.</param>
+		/// <param name="_tarAction"></param>
+		/// <param name="_name"></param>
 		protected DSpeed(Action<TTar> _tarAction, Func<float> _speedDriver, string _name = null)
 			: base(_tarAction, _speedDriver, _name)
 		{
@@ -403,12 +425,14 @@ public static partial class ioDriver
 			LoopCycleCount = 1f;
 		}
 
-		/// <summary>
-		/// Base speed by expression constructor.
-		/// <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_speedDriver">Function that provides this driver's speed value.  Read from on each update call.</param>
-		protected DSpeed(Expression<Func<TTar>> _targetExpr, Func<float> _speedDriver, string _name = null)
+        /// <summary>
+        /// Base speed by expression constructor.
+        /// <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_speedDriver">Function that provides this driver's speed value.  Read from on each update call.</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_name"></param>
+        protected DSpeed(Expression<Func<TTar>> _targetExpr, Func<float> _speedDriver, string _name = null)
 			: base(_targetExpr, _speedDriver, _name)
 		{
 			PingPongDirection = PingPongDir.Forward;
@@ -554,13 +578,15 @@ public static partial class ioDriver
 		public TTar To { get; private set; }
 
 
-		/// <summary>
-		/// Simple speed by action constructor.
-		/// <seealso cref="DSpeed{TTar}"/>
-		/// </summary>
-		/// <param name="_from">Start point</param>
-		/// <param name="_to">End point</param>
-		/// <param name="_speedDriver">Function that provides instantaneous speed value.</param>
+        /// <summary>
+        /// Simple speed by action constructor.
+        /// <seealso cref="DSpeed{TTar}"/>
+        /// </summary>
+        /// <param name="_from">Start point</param>
+        /// <param name="_to">End point</param>
+        /// <param name="_speedDriver">Function that provides instantaneous speed value.</param>
+		/// <param name="_tarAction"></param>
+		/// <param name="_name"></param>
 		public DSpeedSimple(Action<TTar> _tarAction, TTar _from, TTar _to, Func<float> _speedDriver, string _name = null)
 			: base(_tarAction, _speedDriver, _name)
 		{
@@ -569,13 +595,15 @@ public static partial class ioDriver
 			To = _to;
 		}
 
-		/// <summary>
-		/// Simple speed by expression constructor.
-		/// <seealso cref="DSpeed{TTar}"/>
-		/// </summary>
-		/// <param name="_from">Start point</param>
-		/// <param name="_to">End point</param>
-		/// <param name="_speedDriver">Function that provides instantaneous speed value.</param>
+        /// <summary>
+        /// Simple speed by expression constructor.
+        /// <seealso cref="DSpeed{TTar}"/>
+        /// </summary>
+        /// <param name="_from">Start point</param>
+        /// <param name="_to">End point</param>
+        /// <param name="_speedDriver">Function that provides instantaneous speed value.</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_name"></param>
 		public DSpeedSimple(Expression<Func<TTar>> _targetExpr, TTar _from, TTar _to, Func<float> _speedDriver, string _name = null)
 			: base(_targetExpr, _speedDriver, _name)
 		{
@@ -617,12 +645,14 @@ public static partial class ioDriver
 		public override string NiceType { get { return "Step<" + typeof(TTar) + ">"; } }
 
 
-		/// <summary>
-		/// Step driver by action constructor.
-		/// <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_startFrom">Value to begin stepping from.</param>
-		/// <param name="_stepRate">Step rate in seconds.</param>
+        /// <summary>
+        /// Step driver by action constructor.
+        /// <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_startFrom">Value to begin stepping from.</param>
+        /// <param name="_stepRate">Step rate in seconds.</param>
+		/// <param name="_tarAction"></param>
+		/// <param name="_name"></param>
 		public DStep(Action<TTar> _tarAction, Func<TTar> _startFrom, Func<TTar> _stepRate, string _name = null)
 			: base(_tarAction, null, _name)
 		{
@@ -631,12 +661,14 @@ public static partial class ioDriver
 			Driver = _stepRate;
 		}
 
-		/// <summary>
-		/// Step driver by expression constructor.
-		/// <seealso cref="DBase"/>
-		/// </summary>
-		/// <param name="_startFrom">Value to begin stepping from.</param>
-		/// <param name="_stepRate">Step rate in seconds.</param>
+        /// <summary>
+        /// Step driver by expression constructor.
+        /// <seealso cref="DTransfer{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_startFrom">Value to begin stepping from.</param>
+        /// <param name="_stepRate">Step rate in seconds.</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_name"></param>
 		public DStep(Expression<Func<TTar>> _targetExpr, Func<TTar> _startFrom, Func<TTar> _stepRate, string _name = null)
 			: base(_targetExpr, null, _name)
 		{
@@ -711,10 +743,12 @@ public static partial class ioDriver
 
 
         /// <summary>
-		/// Base tween by action constructor.
-		/// <seealso cref="DMapped{TTar,TDri}"/>
-		/// </summary>
-		/// <param name="_cycleDuration">Duration to tween over in seconds.</param>
+        /// Base tween by action constructor.
+        /// <seealso cref="DMapped{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_cycleDuration">Duration to tween over in seconds.</param>
+        /// <param name="_tarAction"></param>
+        /// <param name="_name"></param>
 		protected DTween(Action<TTar> _tarAction, float _cycleDuration, string _name = null)
 			: base(_tarAction, null, 0, 1f, _name)
 		{
@@ -726,11 +760,13 @@ public static partial class ioDriver
 			TotalLoopingProgress = LoopCycleProgress = ElapsedCycleTime = 0;
 		}
 
-		/// <summary>
-		/// Base tween by expression constructor.
-		/// <seealso cref="DMapped{TTar,TDri}"/>
-		/// </summary>
-		/// <param name="_cycleDuration">Duration to tween over in seconds.</param>
+        /// <summary>
+        /// Base tween by expression constructor.
+        /// <seealso cref="DMapped{TTar,TDri}"/>
+        /// </summary>
+        /// <param name="_cycleDuration">Duration to tween over in seconds.</param>
+		/// <param name="_targetExpr"></param>
+		/// <param name="_name"></param>
 		protected DTween(Expression<Func<TTar>> _targetExpr, float _cycleDuration, string _name = null)
 			: base(_targetExpr, null, 0, 1f, _name)
 		{
@@ -864,6 +900,8 @@ public static partial class ioDriver
         /// <param name="_from">Tween target from.  Tween value at start time (zero seconds elapsed).</param>
         /// <param name="_to">Tween target to.  Tween value at end of duration (duration seconds elapsed).</param>
         /// <param name="_cycleDuration">Time in seconds for one cycle.  (Default is <see cref="LoopType.Once"/>)</param>
+        /// <param name="_tarAction"></param>
+        /// <param name="_name"></param>
         public DTweenSimple(Action<TTar> _tarAction, TTar _from, TTar _to, float _cycleDuration, string _name = null) : base(_tarAction, _cycleDuration, _name)
         {
             if (!m_CacheDone) DoCache();
@@ -877,6 +915,8 @@ public static partial class ioDriver
         /// <param name="_from">Tween target from.  Tween value at start time (zero seconds elapsed).</param>
         /// <param name="_to">Tween target to.  Tween value at end of duration (duration seconds elapsed).</param>
         /// <param name="_cycleDuration">Time in seconds for one cycle.  (Default is <see cref="LoopType.Once"/>)</param>
+        /// <param name="_targetExpr"></param>
+        /// <param name="_name"></param>
         public DTweenSimple(Expression<Func<TTar>> _targetExpr, TTar _from, TTar _to, float _cycleDuration, string _name = null) : base(_targetExpr, _cycleDuration, _name)
         {
             if (!m_CacheDone) DoCache();

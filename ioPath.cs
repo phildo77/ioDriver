@@ -68,6 +68,10 @@ public static partial class ioDriver
             set;
         }
 
+        /// See <see cref="Path.Spline{T}.PointMode"/>
+        Path.SplinePointMode PointMode { get; set; }
+
+        /// See <see cref="Path.Spline{T}.ModePCPointCount"/>
         int ModePCPointCount { get; set; }
 
         /// See <see cref="Path.Spline{T}.ModeSLSegmentLen"/>
@@ -80,9 +84,10 @@ public static partial class ioDriver
         /// See <see cref="Path.Spline{T}.ModeSLSegmentAcc"/>
         float ModeSLSegmentAcc { get; set; }
 
-        Path.SplinePointMode PointMode { get; set; }
-
+        /// See <see cref="Path.Spline{T}.ModeMAMinAngle"/>
         float ModeMAMinAngle { get; set; }
+
+        /// See <see cref="Path.Spline{T}.ModeMAMinLength"/>
         float ModeMAMinLength { get; set; }
 
 
@@ -105,11 +110,11 @@ public static partial class ioDriver
     #region Methods
 
     /// <summary>
-    /// Create new cubic spline from this path/spline's 
-    /// <see cref="Path.Base{T}.m_FrameWaypoints">frame</see>.
+    /// Create new cubic spline from this path/spline's frame.
     /// </summary>
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_pathObj">this path object</param>
+    /// <param name="_autoBuild">Enable Autobuild?</param>
     /// <returns>New cubic spline</returns>
     public static Path.Cubic<T> SplineCubic<T>(this Path.Base<T> _pathObj, bool _autoBuild = true)
     {
@@ -117,11 +122,11 @@ public static partial class ioDriver
     }
 
     /// <summary>
-    /// Create new Bezier spline from this path/spline's 
-    /// <see cref="Path.Base{T}.m_FrameWaypoints">frame</see>.
+    /// Create new Bezier spline from this path/spline's frame.
     /// </summary>
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_pathObj">this path object</param>
+    /// <param name="_autoBuild">Enable Autobuild?</param>
     /// <returns>New Bezier spline</returns>
     public static Path.Bezier<T> SplineBezier<T>(this Path.Base<T> _pathObj, bool _autoBuild = true)
     {
@@ -129,10 +134,11 @@ public static partial class ioDriver
     }
 
     /// <summary>
-    /// Create new linear path from this spline's <see cref="Path.Base{T}.m_FrameWaypoints">frame</see>.
+    /// Create new linear path from this spline's frame.
     /// </summary>
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_splineObj">this spline</param>
+    /// <param name="_autoBuild">Enable Autobuild?</param>
     /// <returns>New linear path</returns>
     public static Path.Linear<T> CreateLinearFromFrame<T>(this Path.Spline<T> _splineObj, bool _autoBuild = true)
     {
@@ -144,6 +150,7 @@ public static partial class ioDriver
     /// </summary>
     /// <typeparam name="T">Waypoint type</typeparam>
     /// <param name="_splineObj">this spline</param>
+    /// <param name="_autoBuild">Enable Autobuild?</param>
     /// <returns>New linear path</returns>
     public static Path.Linear<T> CreateLinearFromSpline<T>(this Path.Spline<T> _splineObj, bool _autoBuild = true)
     {
@@ -156,7 +163,6 @@ public static partial class ioDriver
 
     private static VecN ToVecN<T>(T _obj)
     {
-        Init();
         var dimCnt = DTypeInfo<T>.DimCount;
         var vals = new float[dimCnt];
         for (int idx = 0; idx < dimCnt; ++idx)
@@ -202,6 +208,9 @@ public static partial class ioDriver
         /// <param name="_path">PathPoints object to map driver to.</param>
         /// <param name="_driverMapBegin">Drive value to map to beginning of path</param>
         /// <param name="_driverMapEnd">Drive value to map to end of path</param>
+        /// <param name="_tarAction"></param>
+        /// <param name="_driver"></param>
+        /// <param name="_name"></param>
         public DMappedPath(Action<TTar> _tarAction, Path.Base<TTar> _path, Func<TDri> _driver, TDri _driverMapBegin, TDri _driverMapEnd, string _name = null)
             : base(_tarAction, _driver, _driverMapBegin, _driverMapEnd, _name)
         {
@@ -215,6 +224,9 @@ public static partial class ioDriver
         /// <param name="_path">PathPoints object to map the driver to.</param>
         /// <param name="_driverMapBegin">Drive value to map to beginning of path</param>
         /// <param name="_driverMapEnd">Drive value to map to end of path</param>
+        /// <param name="_targetExpr"></param>
+        /// <param name="_driver"></param>
+        /// <param name="_name"></param>
         public DMappedPath(Expression<Func<TTar>> _targetExpr, Path.Base<TTar> _path, Func<TDri> _driver, TDri _driverMapBegin, TDri _driverMapEnd, string _name = null)
             : base(_targetExpr, _driver, _driverMapBegin, _driverMapEnd, _name)
         {
@@ -259,7 +271,7 @@ public static partial class ioDriver
     {
         #region Fields
 
-        /// PathPoints object to drive from.
+        /// Path object to drive from.
         protected Path.Base<TTar> m_Path;
 
         #endregion Fields
@@ -267,10 +279,13 @@ public static partial class ioDriver
         #region Constructors
 
         /// <summary>
-        /// Speed PathPoints driver action constructor.
+        /// Speed Path driver action constructor.
         /// <seealso cref="DSpeed{TTar}"/>
         /// </summary>
-        /// <param name="_path">PathPoints of waypoints</param>
+        /// <param name="_path">Path object to drive from</param>
+        /// <param name="_tarAction"></param>
+        /// <param name="_speedDriver"></param>
+        /// <param name="_name"></param>
         public DSpeedPath(Action<TTar> _tarAction, Path.Base<TTar> _path, Func<float> _speedDriver, string _name = null)
             : base(_tarAction, _speedDriver, _name)
         {
@@ -278,10 +293,13 @@ public static partial class ioDriver
         }
 
         /// <summary>
-        /// Speed PathPoints driver action constructor.
+        /// Speed Path driver expression constructor.
         /// <seealso cref="DSpeed{TTar}"/>
         /// </summary>
-        /// <param name="_path">PathPoints of waypoints</param>
+        /// <param name="_path">Path object to drive from</param>
+        /// <param name="_targetExpr"></param>
+        /// <param name="_speedDriver"></param>
+        /// <param name="_name"></param>
         public DSpeedPath(Expression<Func<TTar>> _targetExpr, Path.Base<TTar> _path, Func<float> _speedDriver, string _name = null)
             : base(_targetExpr, _speedDriver, _name)
         {
@@ -346,20 +364,14 @@ public static partial class ioDriver
 
         #region Constructors
 
-        /// <summary>
         /// Constructor using target action. See <see cref="DTween{TTar}"/>
-        /// </summary>
-        /// <param name="_path">Path to tween through</param>
         public DTweenPath(Action<TTar> _tarAction, Path.Base<TTar> _path, float _cycleDuration, string _name = null)
             : base(_tarAction, _cycleDuration, _name)
         {
             m_Path = _path;
         }
 
-        /// <summary>
         /// Constructor using expression. See <see cref="DTween{TTar}"/>
-        /// </summary>
-        /// <param name="_path">Path to tween through</param>
         public DTweenPath(Expression<Func<TTar>> _targetExpr, Path.Base<TTar> _path, float _cycleDuration, string _name = null)
             : base(_targetExpr, _cycleDuration, _name)
         {
@@ -422,6 +434,7 @@ public static partial class ioDriver
         /// </summary>
         /// <typeparam name="T">Waypoint type</typeparam>
         /// <param name="_pathObj">Path to copy wayponts from</param>
+        /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New linear path object</returns>
         public static Linear<T> CreateLinear<T>(Path.Base<T> _pathObj, bool _autoBuild = true)
         {
@@ -437,6 +450,7 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint type</typeparam>
         /// <param name="_waypoints">List of waypoints</param>
         /// <param name="_closed">Closed path?</param>
+        /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New linear path object</returns>
         public static Linear<T> CreateLinear<T>(bool _closed, List<T> _waypoints, bool _autoBuild = true)
         {
@@ -450,6 +464,7 @@ public static partial class ioDriver
         /// </summary>
         /// <typeparam name="T">Waypoint Type</typeparam>
         /// <param name="_pathObj">Path object containing waypoints to use</param>
+        /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New Bezier spline object</returns>
         public static Bezier<T> CreateBezier<T>(Base<T> _pathObj, bool _autoBuild = true)
         {
@@ -464,6 +479,7 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint Type</typeparam>
         /// <param name="_frameWaypoints">List of waypoints for frame</param>
         /// <param name="_closed">Closed spline?</param>
+        /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New Bezier spline object</returns>
         public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints, bool _autoBuild = true)
         {
@@ -478,6 +494,7 @@ public static partial class ioDriver
         /// </summary>
         /// <typeparam name="T">Waypoint type</typeparam>
         /// <param name="_pathObj">Path object</param>
+        /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New cubic spline object</returns>
         public static Cubic<T> CreateCubic<T>(Base<T> _pathObj, bool _autoBuild = true)
         {
@@ -492,6 +509,7 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint Type</typeparam>
         /// <param name="_frameWaypoints">List of waypoints for frame</param>
         /// <param name="_closed">Closed spline?</param>
+        /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New cubic spline object</returns>
         public static Cubic<T> CreateCubic<T>(bool _closed, List<T> _frameWaypoints, bool _autoBuild = true)
         {
@@ -517,6 +535,7 @@ public static partial class ioDriver
                 protected set;
             }
 
+            /// Array of VecN built points for this path.
             protected VecN[] PathPointsVN;
 
             /// Array of segments in path.
@@ -532,6 +551,7 @@ public static partial class ioDriver
             /// Is this a closed path?
             protected bool m_Closed;
             
+            /// If set to true, this path object will rebuild itself on any settings change.
             public bool AutoBuild;
 
             /// <summary>
@@ -540,6 +560,7 @@ public static partial class ioDriver
             /// </summary>
             /// <param name="_frameWaypoints">List of waypoints used to define path's frame</param>
             /// <param name="_closed">Is this a closed path?</param>
+            /// <param name="_autoBuild">Enable Autobuild?</param>
             protected Base(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
             {
                 m_FrameVN = ToVecNs(_frameWaypoints).ToList();
@@ -789,6 +810,11 @@ public static partial class ioDriver
                 return ValueAtN(_pct).To<T>();
             }
 
+            /// <summary>
+            /// Get VecN representation of point at specified percent along this path.
+            /// </summary>
+            /// <param name="_pct">Percent along path to retreive</param>
+            /// <returns>VecN object at percent</returns>
             protected VecN ValueAtN(float _pct)
             {
                 return LerpPathN(_pct, PathPointsVN, m_PathSegments, PathLength, m_Closed);
@@ -804,6 +830,11 @@ public static partial class ioDriver
                 return FrameValueAtN(_pct).To<T>();
             }
 
+            /// <summary>
+            /// Get VecN representing point at specified percent along frame.
+            /// </summary>
+            /// <param name="_pct">Percent along frame to retrieve</param>
+            /// <returns>VecN object at _pct</returns>
             protected VecN FrameValueAtN(float _pct)
             {
                 var frmPts = ToList(m_FrameVN);
@@ -814,9 +845,8 @@ public static partial class ioDriver
 
             /// <summary>
             /// "Internal Build" rebuilds frame if requested then if <see cref="AutoBuild"/> = true, will call <see cref="BuildPath()"/>.
-            /// If <see cref="AutoBuild"/> = false, will set <see cref="IsValid"/> to false.
             /// </summary>
-            /// <param name="_rebuildFrame"></param>
+            /// <param name="_rebuildFrame">Rebuild Frame?</param>
             protected void IBuild(bool _rebuildFrame)
             {
                 if (_rebuildFrame)
@@ -912,6 +942,7 @@ public static partial class ioDriver
                     Length = _segment.Length;
                 }
 
+                /// Returns string representation of the data in this segment.
                 public override string ToString()
                 {
                     return "Seg - FrmIdx: " + FromIdx + " PctStart: " + PctStart + " PctEnd: " + PctEnd + " Len: " + Length;
@@ -990,6 +1021,8 @@ public static partial class ioDriver
         /// <typeparam name="T">Waypoint Type</typeparam>
         public abstract class Spline<T> : Base<T>, ISpline
         {
+            /// Constant representing automatic minimum segement length to search to for 
+            /// <see cref="SplinePointMode.MinAngle"/> mode.
             public const float MA_LENGTH_AUTO = float.NegativeInfinity;
 
             /// Backing field for <see cref="DimsToSpline"/>
@@ -1020,9 +1053,8 @@ public static partial class ioDriver
 
             private float m_ModeMAMinAngle;
 
-            /// <summary>
-            /// Get / Set minimum angle for MinAngle mode.
-            /// </summary>
+            /// Get / Set minimum angle search for mode <see cref="SplinePointMode.MinAngle"/>.
+            /// Will not rebuild if current <see cref="PointMode"/> is other than <see cref="SplinePointMode.MinAngle"/>
             public float ModeMAMinAngle
             {
                 get { return m_ModeMAMinAngle; }
@@ -1042,9 +1074,8 @@ public static partial class ioDriver
 
             private float m_ModeMAMinLength;
 
-            /// <summary>
-            /// Get / Set minimum segment length for MinAngle mode.
-            /// </summary>
+            /// Get / Set minimum segment length search for mode <see cref="SplinePointMode.MinAngle"/>.
+            /// Will not rebuild if current <see cref="PointMode"/> is other than <see cref="SplinePointMode.MinAngle"/>
             public float ModeMAMinLength
             {
                 get { return m_ModeMAMinLength; }
@@ -1052,7 +1083,7 @@ public static partial class ioDriver
                 {
                     if (value <= 0 && value != MA_LENGTH_AUTO)
                     {
-                        m_ModeMAMinLength = SplineLengthEstimated() / 500f;
+                        m_ModeMAMinLength = FrameLength / 500f;
                         Log.Err("Min Angle Min length must greater than zero.  Setting to " + m_ModeMAMinLength);
 
                     }
@@ -1069,6 +1100,8 @@ public static partial class ioDriver
 
             private int m_ModePCPointCount;
 
+            /// Get / Set point count for <see cref="SplinePointMode.PointCount"/>.
+            /// Will not rebuild if current <see cref="PointMode"/> is other than <see cref="SplinePointMode.PointCount"/>
             public int ModePCPointCount
             {
                 get { return m_ModePCPointCount; }
@@ -1093,7 +1126,7 @@ public static partial class ioDriver
 
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build"/> is not called during construction.
-            /// <seealso cref="Base{T}(System.Collections.Generic.List{T},bool)"/>
+            /// <seealso cref="Base{T}(IEnumerable{T},bool,bool)"/>
             /// </summary>
             protected Spline(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
                 : base(_frameWaypoints, _closed, _autoBuild)
@@ -1103,9 +1136,8 @@ public static partial class ioDriver
                 m_ModeMAMinLength = MA_LENGTH_AUTO;
             }
 
-            /// Get/Set spline segment lengths.  
-            /// Calls <see cref="UpdatePath"/> on change.
-            /// Setting this to a new value will rebuild the spline.
+            /// Get / Set target segment length for mode <see cref="SplinePointMode.SegmentLength"/>.
+            /// Will not rebuild if current <see cref="PointMode"/> is other than <see cref="SplinePointMode.SegmentLength"/>
             public float ModeSLSegmentLen
             {
                 get
@@ -1127,9 +1159,9 @@ public static partial class ioDriver
                 }
             }
 
-            /// Get/Set the percentage of accuracy when calculating segments lengths.  Between 0 and 1f.  Closer to zero will be more accurate but will be less efficient.
+            /// Get / Set target segment length accuracy for mode <see cref="SplinePointMode.SegmentLength"/>.
             /// ie. Segments will be of length of 2.0f +/- 0.1 with <see cref="ModeSLSegmentLen"/> of 2.0f and Segment Accuracy of 0.05
-            /// On set, will rebuild the spline if new value is less than current value.  Will not rebuild otherwise.
+            /// Will not rebuild if current <see cref="PointMode"/> is other than <see cref="SplinePointMode.SegmentLength"/>
             public float ModeSLSegmentAcc
             {
                 get { return m_ModeSLSegmentAcc; }
@@ -1150,7 +1182,6 @@ public static partial class ioDriver
             }
 
             /// List of dimensions to be splined from frame waypoints.
-            /// <see cref="UpdatePath"/> is called on change
             public int[] DimsToSpline
             {
                 get { return m_DimsToSpline.Clone() as int[]; }
@@ -1170,17 +1201,28 @@ public static partial class ioDriver
             /// <returns>Value at specified percentage</returns>
             public T SplineValueAt(float _pct) { return SplineValueAtN(_pct).To<T>(); }
 
+
+            /// <summary>
+            /// Get representation of the tangent value at specified percent along spline.
+            /// </summary>
+            /// <param name="_pct">Percent along spline (0 to 1f)</param>
+            /// <returns>Tangent / Derivative at _pct along spline</returns>
             public T SplineTangentAt(float _pct) { return SplineTangentAtN(_pct).To<T>(); }
 
             /// <summary>
             /// Returns VecN value of spline at specified percentage along spline.
-            /// Abstract - Override to implement.  Built in splines (see <see cref="Bezier{T}"/> and <see cref="Cubic{T}"/>) caluclate value using
+            /// Built in splines (see <see cref="Bezier{T}"/> and <see cref="Cubic{T}"/>) caluclate value using
             /// Spline's mathematical formula.  
             /// </summary>
             /// <param name="_pct">Percentage along spline (0 to 1f)</param>
             /// <returns>Value at specified percentage</returns>
             protected abstract VecN SplineValueAtN(float _pct);
 
+            /// <summary>
+            /// Get the VecN representation of the tangent value at specified percent along spline.
+            /// </summary>
+            /// <param name="_pct">Percent along spline (0 to 1f)</param>
+            /// <returns>Tangent / Derivative Vector at _pct along spline</returns>
             protected abstract VecN SplineTangentAtN(float _pct);
 
             private float GetDefaultSegmentLength()
@@ -1490,9 +1532,8 @@ public static partial class ioDriver
             /// <summary>
             /// Constructor.  Note that <see cref="Base{T}.Build()"/> is not called during construction. 
             /// Use static factory methods.
-            /// <seealso cref="CreateBezier{T}(bool,List{T})"/>
-            /// <seealso cref="CreateBezier{T}(bool,T[])"/>
-            /// <seealso cref="CreateBezier{T}(Base{T})"/>
+            /// <seealso cref="CreateBezier{T}(bool,List{T},bool)"/>
+            /// <seealso cref="CreateBezier{T}(Base{T},bool)"/>
             /// </summary>
             public Bezier(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
                 : base(_frameWaypoints, _closed, _autoBuild)
@@ -1537,6 +1578,15 @@ public static partial class ioDriver
                 return p;
             }
 
+            /// <summary>
+            /// Bezier derivative calculation.
+            /// </summary>
+            /// <param name="_pct">Location along curve in percent to calculate (0 to 1f)</param>
+            /// <param name="_p0">Start point</param>
+            /// <param name="_p1">Start out control point</param>
+            /// <param name="_p2">End in control point</param>
+            /// <param name="_p3">End point</param>
+            /// <returns>Calculated derivative</returns>
             public static float bezierDeriv(float _pct, float _p0, float _p1, float _p2, float _p3)
             {
                 float p = 0;
@@ -1560,7 +1610,7 @@ public static partial class ioDriver
             }
              * */
 
-
+            /// See <see cref="Spline{T}.SplineValueAtN"/>
             protected override VecN SplineValueAtN(float _pct)
             {
                 if (_pct <= 0f)
@@ -1595,6 +1645,7 @@ public static partial class ioDriver
                 return new VecN(vals);
             }
 
+            /// See <see cref="Spline{T}.SplineTangentAtN"/>
             protected override VecN SplineTangentAtN(float _pct)
             {
                 var bezCnt = m_FrameVN.Count;
@@ -1660,11 +1711,10 @@ public static partial class ioDriver
             }
 
             /// <summary>
-            /// Create default control for specified bezier spline.
+            /// Create default control for this bezier spline.
             /// </summary>
             /// Creates colinear control with magnitude based on neighboring waypoint data.
-            /// <param name="_parent">Bezier object to create control data for</param>
-            /// <returns>List of control objects</returns>
+            /// <returns>Array of control objects</returns>
             private Control[] CreateDefaultCtl()
             {
                 var control = new List<Control>();
@@ -1673,6 +1723,7 @@ public static partial class ioDriver
                 return control.ToArray();
             }
 
+            /// Get a copy of array of control objects for this bezier spline, indexed by frame point index.
             public Control[] GetControl()
             {
                 var cntl = new Control[m_Control.Length];
@@ -1683,6 +1734,7 @@ public static partial class ioDriver
                 return cntl;
             }
 
+            /// Get a copy of the control object at specified index of frame point.
             public Control GetControlAt(int _frameIdx)
             {
                 if (_frameIdx < 0 || _frameIdx >= m_FrameVN.Count)
@@ -1694,6 +1746,7 @@ public static partial class ioDriver
                 return new Control(m_Control[_frameIdx]);
             }
 
+            /// Set this Bezier spline's control with specified array of control.
             public Bezier<T> SetControl(Control[] _newControl)
             {
                 if (_newControl.Length != m_Control.Length)
@@ -1710,6 +1763,7 @@ public static partial class ioDriver
                 return this;
             }
 
+            /// Set this Bezier spline's control at specified frame point index with specified control object.
             public Bezier<T> SetControlAt(int _wayptIdx, Control _control)
             {
                 if (_wayptIdx < 0 || _wayptIdx >= m_FrameVN.Count)
@@ -1724,6 +1778,12 @@ public static partial class ioDriver
                 return this;
             }
 
+            /// <summary>
+            /// Set the position of the specified control's out point.
+            /// </summary>
+            /// <param name="_wayptIdx">Frame Point index for target control object</param>
+            /// <param name="_outPt">Posotion to set control's out point</param>
+            /// <returns>Updated Bezier spline object</returns>
             public Bezier<T> SetControlPosOut(int _wayptIdx, T _outPt)
             {
                 if (_wayptIdx < 0 || _wayptIdx >= m_FrameVN.Count)
@@ -1743,6 +1803,12 @@ public static partial class ioDriver
                 return this;
             }
 
+            /// <summary>
+            /// Set the position of the specified control's in point.
+            /// </summary>
+            /// <param name="_wayptIdx">Frame Point index for target control object</param>
+            /// <param name="_inPt">Posotion to set control's in point</param>
+            /// <returns>Updated Bezier spline object</returns>
             public Bezier<T> SetControlPosIn(int _wayptIdx, T _inPt)
             {
                 if (_wayptIdx < 0 || _wayptIdx >= m_FrameVN.Count)
@@ -1769,14 +1835,15 @@ public static partial class ioDriver
             {
 
                 private bool m_Colinear = true;
+
+                /// VecN representation of in vector.  Pointing away from frame point.
                 public VecN VInN;
+                /// VecN representation of out vector.  Pointing away from frame point.
                 public VecN VOutN;
 
                 /// <summary>
                 /// Bezier control object constructor
                 /// </summary>
-                /// <param name="_parent">Reference to parent Bezier spline object</param>
-                /// <param name="_index">Waypoint index this control point is tied to</param>
                 /// <param name="_tanOutDir">Tangent out direction (in direction will be opposite, colinear)</param>
                 /// <param name="_inMag">Distance to place IN control point from waypoint along tangent.</param>
                 /// <param name="_outMag">Distance to place OUT control point from waypoint along tangent</param>
@@ -1788,6 +1855,12 @@ public static partial class ioDriver
                     m_Colinear = true;
                 }
 
+                /// <summary>
+                /// Bezier control object constructor
+                /// </summary>
+                /// <param name="_inVec">Control in vector.  Pointing away from frame point.</param>
+                /// <param name="_outVec">Control out vector. Pointing away from frame point.</param>
+                /// <param name="_colinear">Maintain colinearity?</param>
                 public Control(T _inVec, T _outVec, bool _colinear = true)
                 {
                     VInN = ToVecN(_inVec);
@@ -1797,10 +1870,8 @@ public static partial class ioDriver
 
 
                 /// <summary>
-                /// Bezier control object constructor, copy data from provided control object
+                /// Bezier control copy constructor.
                 /// </summary>
-                /// <param name="_parent">Reference to parent Bezier spline object</param>
-                /// <param name="_index">Waypoint index this control point is tied to</param>
                 /// <param name="_control">Control data to copy</param>
                 public Control(Control _control)
                 {
@@ -1812,10 +1883,6 @@ public static partial class ioDriver
                 private Control()
                 {
                 }
-
-
-
-
 
                 /// Get/Set whether this control object is colinear.  (In/Out tangents are forced opposite directions)
                 public bool Colinear
@@ -1909,9 +1976,8 @@ public static partial class ioDriver
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build()"/> is not called during construction.
             /// Use static factory methods.
-            /// <seealso cref="CreateCubic{T}(bool, List{T})"/>
-            /// <seealso cref="CreateCubic{T}(bool, T[])"/>
-            /// <seealso cref="CreateCubic{T}(Base{T})"/>
+            /// <seealso cref="CreateCubic{T}(bool, List{T},bool)"/>
+            /// <seealso cref="CreateCubic{T}(Base{T},bool)"/>
             /// </summary>
             public Cubic(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
                 : base(_frameWaypoints, _closed, _autoBuild)
@@ -1946,7 +2012,7 @@ public static partial class ioDriver
                 base.BuildPath();
             }
 
-
+            /// See <see cref="Spline{T}.SplineValueAtN"/>
             protected override VecN SplineValueAtN(float _pct)
             {
                 if (_pct <= 0f) return m_FrameVN[0];
@@ -1967,7 +2033,7 @@ public static partial class ioDriver
                 return new VecN(vals);
             }
 
-
+            /// See <see cref="Spline{T}.SplineTangentAtN"/>
             protected override VecN SplineTangentAtN(float _pct)
             {
                 if (_pct <= 0f) _pct = 0;
@@ -2128,9 +2194,8 @@ public static partial class ioDriver
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build"/> is not called during construction.
             /// Use static factory methods.
-            /// <seealso cref="CreateLinear{T}(bool,List{T})"/>
-            /// <seealso cref="CreateLinear{T}(bool,T[])"/>
-            /// <seealso cref="CreateLinear{T}(Base{T})"/>
+            /// <seealso cref="CreateLinear{T}(bool,List{T},bool)"/>
+            /// <seealso cref="CreateLinear{T}(Base{T},bool)"/>
             /// </summary>
             public Linear(IEnumerable<T> _waypoints, bool _closed, bool _autoBuild)
                 : base(_waypoints, _closed, _autoBuild)
@@ -2186,8 +2251,7 @@ public static partial class ioDriver
 
         static VecN()
         {
-            if (!ioDriver.InitDone)
-                ioDriver.Init();
+            ioDriver.Init();
         }
 
         /// <summary>
@@ -2205,6 +2269,7 @@ public static partial class ioDriver
         /// <param name="_source">VecN data to copy for new VecN</param>
         public VecN(VecN _source)
         {
+            Vals = new float[_source.Vals.Length];
             _source.Vals.CopyTo(Vals, 0);
         }
 
@@ -2228,6 +2293,7 @@ public static partial class ioDriver
             }
         }
 
+        /// Returns the magnitude of this vector squared.
         public float MagnitudeSquared
         {
             get
@@ -2347,6 +2413,12 @@ public static partial class ioDriver
             return tVal;
         }
 
+        /// <summary>
+        /// Get angle in radians between specified VecNs.
+        /// </summary>
+        /// <param name="_a">First Vector</param>
+        /// <param name="_b">Second Vector</param>
+        /// <returns>Angle in radians</returns>
         public static float Angle(VecN _a, VecN _b)
         {
             var dot = Dot(_a, _b);
@@ -2400,6 +2472,7 @@ public static partial class ioDriver
             return true;
         }
 
+        /// Hash code calculation
         public override int GetHashCode()
         {
             unchecked
@@ -2420,6 +2493,9 @@ public static partial class ioDriver
             return DTypeInfo<T>.Constructs[DimCount](Vals);
         }
 
+        /// Convert to array of type T.
+        /// <seealso cref="Teacher.TeachCoord{T}(int, Teacher.FuncConstruct{T}, Teacher.FuncGetDim{T}[])"/>
+        /// <seealso cref="Teacher.TeachCoord{T}(Dictionary{int,Teacher.FuncConstruct{T}}, Teacher.FuncGetDim{T}[])"/>
         public static T[] ToArray<T>(IEnumerable<VecN> _points)
         {
             return _points.Select(_pt => _pt.To<T>()).ToArray();
@@ -2436,6 +2512,13 @@ public static partial class ioDriver
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Linearly interpolate line defined by two points.
+        /// </summary>
+        /// <param name="_ptA">Line definition point A</param>
+        /// <param name="_ptB">Line definition point B</param>
+        /// <param name="_pct">Percent along line to calculate (0 to 1f)</param>
+        /// <returns>Calculated LERP point</returns>
         public static VecN Lerp(VecN _ptA, VecN _ptB, float _pct)
         {
             var rslt = new float[_ptA.DimCount];
@@ -2444,6 +2527,14 @@ public static partial class ioDriver
             return new VecN(rslt);
         }
 
+        /// <summary>
+        /// Inverse lerp calculation.  Does not verify if specified value is part of line.
+        /// Checks each dimension for ILerp value linearly until valid (_a dim != _b dim) is found.
+        /// </summary>
+        /// <param name="_ptA">Line start point</param>
+        /// <param name="_ptB">Line end point</param>
+        /// <param name="_value">Value to ILerp on line</param>
+        /// <returns>Percent of value along line, NaN on fail</returns>
         public static float ILerp(VecN _ptA, VecN _ptB, VecN _value)
         {
             var dimCount = _ptA.DimCount;
@@ -2465,11 +2556,20 @@ public static partial class ioDriver
             return result;
         }
 
+        /// <summary>
+        /// Find distance of point from closest point on specified line.
+        /// </summary>
+        /// <param name="_linePtA">Line point A</param>
+        /// <param name="_linePtB">Line point B</param>
+        /// <param name="_point">Point to measure distance from</param>
+        /// <param name="_pointOnLine">Closest point on line</param>
+        /// <returns>Distance between point and closest point on line</returns>
         public static float PointToLineDistance(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
         {
             return (float)Math.Sqrt(PointToLineDistanceSquared(_linePtA, _linePtB, _point, out _pointOnLine));
         }
 
+        /// See <see cref="PointToLineDistance"/> (which is the square root of the result of this function)
         public static float PointToLineDistanceSquared(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
         {
             var line = _linePtB - _linePtA;
@@ -2481,6 +2581,13 @@ public static partial class ioDriver
             return (_linePtA + p - _point).MagnitudeSquared;
         }
 
+        /// <summary>
+        /// Return the nearest point found on line (defined by two points) to specified point.
+        /// </summary>
+        /// <param name="_linePtA">Line definition point A</param>
+        /// <param name="_linePtB">Line definition point B</param>
+        /// <param name="_point">Point to find nearest to on line</param>
+        /// <returns>Closest point on line to _point</returns>
         public static VecN NearestPointOnLine(VecN _linePtA, VecN _linePtB, VecN _point)
         {
             var lineDir = (_linePtB - _linePtA).Normalized;
