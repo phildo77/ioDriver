@@ -548,19 +548,19 @@ public static class ioDriverFluency //TODO cleanup/split
         return _thisDriver;
     }
 
-    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SegmentLength"/>
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.ModeSLSegmentLen"/>
     public static T SetSegmentLength<T>(this T _spline, float _length)
         where T : ioDriver.ISpline
     {
-        _spline.SegmentLength = _length;
+        _spline.ModeSLSegmentLen = _length;
         return _spline;
     }
 
-    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.SegmentAccuracy"/>
+    /// Fluency Method. <seealso cref="ioDriver.Path.Spline{T}.ModeSLSegmentAcc"/>
     public static T SetSegmentAccuracy<T>(this T _spline, float _accuracy)
         where T : ioDriver.ISpline
     {
-        _spline.SegmentAccuracy = _accuracy;
+        _spline.ModeSLSegmentAcc = _accuracy;
         return _spline;
     }
 
@@ -572,15 +572,21 @@ public static class ioDriverFluency //TODO cleanup/split
         return _spline;
     }
 
-    public static T SetMinAngle<T>(this T _spline, float _minAngle) where T : ioDriver.ISpline
+    public static T SetModePCPointCount<T>(this T _spline, int _pointCount) where T : ioDriver.ISpline
     {
-        _spline.MinAngle = _minAngle;
+        _spline.ModePCPointCount = _pointCount;
         return _spline;
     }
 
-    public static T SetMinAngleMinLength<T>(this T _spline, float _length) where T : ioDriver.ISpline
+    public static T SetModeMAMinAngle<T>(this T _spline, float _minAngle) where T : ioDriver.ISpline
     {
-        _spline.MinAngleMinLength = _length;
+        _spline.ModeMAMinAngle = _minAngle;
+        return _spline;
+    }
+
+    public static T SetModeMAMinLength<T>(this T _spline, float _length) where T : ioDriver.ISpline
+    {
+        _spline.ModeMAMinLength = _length;
         return _spline;
     }
 

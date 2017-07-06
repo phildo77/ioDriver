@@ -68,20 +68,22 @@ public static partial class ioDriver
             set;
         }
 
-        /// See <see cref="Path.Spline{T}.SegmentLength"/>
-        float SegmentLength
+        int ModePCPointCount { get; set; }
+
+        /// See <see cref="Path.Spline{T}.ModeSLSegmentLen"/>
+        float ModeSLSegmentLen
         {
             get;
             set;
         }
 
-        /// See <see cref="Path.Spline{T}.SegmentAccuracy"/>
-        float SegmentAccuracy { get; set; }
+        /// See <see cref="Path.Spline{T}.ModeSLSegmentAcc"/>
+        float ModeSLSegmentAcc { get; set; }
 
         Path.SplinePointMode PointMode { get; set; }
 
-        float MinAngle { get; set; }
-        float MinAngleMinLength { get; set; }
+        float ModeMAMinAngle { get; set; }
+        float ModeMAMinLength { get; set; }
 
 
         #endregion Properties
@@ -529,12 +531,7 @@ public static partial class ioDriver
 
             /// Is this a closed path?
             protected bool m_Closed;
-
-            /// How long before timeout in <see cref="BuildPath"/>
-            public float TimeOut = 1000;
-
-            public bool IsValid { get; private set; }
-
+            
             public bool AutoBuild;
 
             /// <summary>
@@ -553,7 +550,6 @@ public static partial class ioDriver
                         m_FrameVN.RemoveAt(m_FrameVN.Count - 1);
 
                 BuildFrame();
-                IsValid = false;
                 AutoBuild = _autoBuild;
             }
 
@@ -826,16 +822,14 @@ public static partial class ioDriver
                 if (_rebuildFrame)
                     BuildFrame();
 
-                if (AutoBuild)
-                    IsValid = BuildPath();
-                else
-                    IsValid = false;
+                if (AutoBuild) BuildPath();
             }
 
             /// Calculate path data, populate <see cref="PathPoints"/> and <see cref="PathSegments"/>
+            /// Use when all settings are complete and Autobuild is set to false.
             public void Build()
             {
-                IsValid = BuildPath();
+                BuildPath();
             }
 
             private void BuildFrame()
@@ -865,7 +859,7 @@ public static partial class ioDriver
             }
 
             /// Override to update <see cref="PathPoints"/> and <see cref="PathSegments"/> here.
-            protected abstract bool BuildPath();
+            protected abstract void BuildPath();
 
 
             /// Object representing segment between two points on a <see cref="Base{T}"/>.
@@ -985,7 +979,9 @@ public static partial class ioDriver
             /// Build spline points based on a minimum angle between segments.
             MinAngle,
             /// Build spline points based on a minimum length for segments.
-            SegmentLength
+            SegmentLength,
+            /// Build spline points based on number of points
+            PointCount
         }
 
         /// <summary>
@@ -999,11 +995,11 @@ public static partial class ioDriver
             /// Backing field for <see cref="DimsToSpline"/>
             protected int[] m_DimsToSpline;
 
-            /// Backing field for <see cref="SegmentLength"/>
-            protected float m_SegmentLength;
+            /// Backing field for <see cref="ModeSLSegmentLen"/>
+            protected float m_ModeSLSegmentLen;
 
-            /// Backing field for <see cref="SegmentAccuracy"/>
-            private float m_SegmentAccuracy;
+            /// Backing field for <see cref="ModeSLSegmentAcc"/>
+            private float m_ModeSLSegmentAcc;
 
             private SplinePointMode m_PointMode;
 
@@ -1022,51 +1018,74 @@ public static partial class ioDriver
             }
 
 
-            private float m_MinAngle;
+            private float m_ModeMAMinAngle;
 
             /// <summary>
             /// Get / Set minimum angle for MinAngle mode.
             /// </summary>
-            public float MinAngle
+            public float ModeMAMinAngle
             {
-                get { return m_MinAngle; }
+                get { return m_ModeMAMinAngle; }
                 set
                 {
                     if (value <= 0 || value >= 180)
                     {
                         Log.Err("Min Angle must be between 0 and 180 degrees.  Setting Min Angle to 90 Degrees.");
-                        m_MinAngle = 90f;
+                        m_ModeMAMinAngle = 90f;
                     }
-                    if (m_MinAngle == value) return;
-                    m_MinAngle = value;
+                    if (m_ModeMAMinAngle == value) return;
+                    m_ModeMAMinAngle = value;
                     if (PointMode == SplinePointMode.MinAngle)
                         IBuild(false);
                 }
             }
 
-            private float m_MinAngleMinLength;
+            private float m_ModeMAMinLength;
 
             /// <summary>
             /// Get / Set minimum segment length for MinAngle mode.
             /// </summary>
-            public float MinAngleMinLength
+            public float ModeMAMinLength
             {
-                get { return m_MinAngleMinLength; }
+                get { return m_ModeMAMinLength; }
                 set
                 {
                     if (value <= 0 && value != MA_LENGTH_AUTO)
                     {
-                        m_MinAngleMinLength = SplineLengthEstimated() / 500f;
-                        Log.Err("Min Angle Min length must greater than zero.  Setting to " + m_MinAngleMinLength);
+                        m_ModeMAMinLength = SplineLengthEstimated() / 500f;
+                        Log.Err("Min Angle Min length must greater than zero.  Setting to " + m_ModeMAMinLength);
 
                     }
                     else
                     {
-                        if (m_MinAngleMinLength == value) return;
-                        m_MinAngleMinLength = value;
+                        if (m_ModeMAMinLength == value) return;
+                        m_ModeMAMinLength = value;
                     }
 
                     if (PointMode == SplinePointMode.MinAngle)
+                        IBuild(false);
+                }
+            }
+
+            private int m_ModePCPointCount;
+
+            public int ModePCPointCount
+            {
+                get { return m_ModePCPointCount; }
+                set
+                {
+                    if (value <= 1)
+                    {
+                        m_ModePCPointCount = Closed ? 3 : 2;
+                        Log.Err("Point Count must be greater than 1. Setting to " + m_ModePCPointCount);
+                    }
+                    else
+                    {
+                        if (m_ModePCPointCount == value) return;
+                        m_ModePCPointCount = value;
+                    }
+
+                    if (PointMode == SplinePointMode.PointCount)
                         IBuild(false);
                 }
             }
@@ -1080,50 +1099,50 @@ public static partial class ioDriver
                 : base(_frameWaypoints, _closed, _autoBuild)
             {
                 m_DimsToSpline = CheckDims(null);
-                m_SegmentLength = GetDefaultSegmentLength();
-                m_MinAngleMinLength = MA_LENGTH_AUTO;
+                m_ModeSLSegmentLen = GetDefaultSegmentLength();
+                m_ModeMAMinLength = MA_LENGTH_AUTO;
             }
 
             /// Get/Set spline segment lengths.  
             /// Calls <see cref="UpdatePath"/> on change.
             /// Setting this to a new value will rebuild the spline.
-            public float SegmentLength
+            public float ModeSLSegmentLen
             {
                 get
                 {
-                    return m_SegmentLength;
+                    return m_ModeSLSegmentLen;
                 }
                 set
                 {
-                    if (m_SegmentLength == value) return;
+                    if (m_ModeSLSegmentLen == value) return;
                     if (value <= 0)
                     {
-                        m_SegmentLength = GetDefaultSegmentLength();
-                        Log.Err("Segment length must greater than zero.  Setting to '" + m_SegmentLength + "'");
+                        m_ModeSLSegmentLen = GetDefaultSegmentLength();
+                        Log.Err("Segment length must greater than zero.  Setting to '" + m_ModeSLSegmentLen + "'");
                     }
                     else
-                        m_SegmentLength = value;
+                        m_ModeSLSegmentLen = value;
                     if (PointMode == SplinePointMode.SegmentLength)
                         IBuild(false);
                 }
             }
 
             /// Get/Set the percentage of accuracy when calculating segments lengths.  Between 0 and 1f.  Closer to zero will be more accurate but will be less efficient.
-            /// ie. Segments will be of length of 2.0f +/- 0.1 with <see cref="SegmentLength"/> of 2.0f and Segment Accuracy of 0.05
+            /// ie. Segments will be of length of 2.0f +/- 0.1 with <see cref="ModeSLSegmentLen"/> of 2.0f and Segment Accuracy of 0.05
             /// On set, will rebuild the spline if new value is less than current value.  Will not rebuild otherwise.
-            public float SegmentAccuracy
+            public float ModeSLSegmentAcc
             {
-                get { return m_SegmentAccuracy; }
+                get { return m_ModeSLSegmentAcc; }
                 set
                 {
-                    if (m_SegmentAccuracy == value) return;
+                    if (m_ModeSLSegmentAcc == value) return;
                     var val = value;
                     if (value <= 0 || value >= 0.9999f)
                     {
                         val = 0.25f;
                         Log.Err("Segment accuracy cannot be less than zero and must be less than 1.  Setting to '" + val + "'");
                     }
-                    m_SegmentAccuracy = val;
+                    m_ModeSLSegmentAcc = val;
                     if (PointMode == SplinePointMode.SegmentLength)
                         IBuild(false);
                 }
@@ -1171,7 +1190,7 @@ public static partial class ioDriver
 
 
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
-            protected override bool BuildPath()
+            protected override void BuildPath()
             {
                 Func<float, float, float> glptFuncSq =
                     (_fromPct, _toPct) =>
@@ -1179,18 +1198,38 @@ public static partial class ioDriver
 
 
                 var timeStamp = System.DateTime.UtcNow.Ticks;
-                if (PointMode == SplinePointMode.SegmentLength)
-                {
-                    if (m_SegmentLength <= 0)
-                        m_SegmentLength = GetDefaultSegmentLength();
-                    if (m_SegmentAccuracy <= 0 || m_SegmentAccuracy >= 1f)
-                        m_SegmentAccuracy = 0.3f;
 
-                    var tgtLenMinSq = (m_SegmentLength - m_SegmentLength * m_SegmentAccuracy)
-                        * (m_SegmentLength - m_SegmentLength * m_SegmentAccuracy);
-                    var tgtLenMaxSq = (m_SegmentLength + m_SegmentLength * m_SegmentAccuracy)
-                        * (m_SegmentLength + m_SegmentLength * m_SegmentAccuracy);
-                    var guessPct = m_SegmentLength / SplineLengthEstimated();
+                if (PointMode == SplinePointMode.PointCount)
+                {
+                    if (m_ModePCPointCount <= 1)
+                        m_ModePCPointCount = 100; //TODO make default const?
+                    
+                    var frmPct = 0f;
+                    var ptsN = new List<VecN> { SplineValueAtN(frmPct) };
+                    var segs = new List<Segment>();
+                    for (int idx = 1; idx < m_ModePCPointCount; ++idx)
+                    {
+                        var toPct = (float) (idx)/ (float)(m_ModePCPointCount - 1);
+                        ptsN.Add(SplineValueAtN(toPct));
+                        segs.Add(new Segment(idx, frmPct, toPct, (ptsN[idx - 1] - ptsN[idx]).Magnitude));
+                        frmPct = toPct;
+                    }
+
+                    PathPointsVN = ptsN.ToArray();
+                    m_PathSegments = segs.ToArray();
+                }
+                else if (PointMode == SplinePointMode.SegmentLength)
+                {
+                    if (m_ModeSLSegmentLen <= 0)
+                        m_ModeSLSegmentLen = GetDefaultSegmentLength();
+                    if (m_ModeSLSegmentAcc <= 0 || m_ModeSLSegmentAcc >= 1f)
+                        m_ModeSLSegmentAcc = 0.3f;
+
+                    var tgtLenMinSq = (m_ModeSLSegmentLen - m_ModeSLSegmentLen * m_ModeSLSegmentAcc)
+                        * (m_ModeSLSegmentLen - m_ModeSLSegmentLen * m_ModeSLSegmentAcc);
+                    var tgtLenMaxSq = (m_ModeSLSegmentLen + m_ModeSLSegmentLen * m_ModeSLSegmentAcc)
+                        * (m_ModeSLSegmentLen + m_ModeSLSegmentLen * m_ModeSLSegmentAcc);
+                    var guessPct = m_ModeSLSegmentLen / SplineLengthEstimated();
 
                     var fromPtN = m_FrameVN[0];
                     var endPtN = SplineValueAtN(1f);
@@ -1256,13 +1295,17 @@ public static partial class ioDriver
                             }
                             lenSq = glptFuncSq(fromPct, curPct);
 
+                            /*
                             var curTicks = DateTime.UtcNow.Ticks - timeStamp;
                             if (curTicks / System.TimeSpan.TicksPerMillisecond > TimeOut)
                             {
-                                Log.Err("Timeout building path.  Timeout = " + TimeOut + " ms");
-                                return false;
+                                Log.Err("Timeout building path.  Timeout = " + TimeOut + " ms.  Setting mode Point Count");
+                                m_PointMode = SplinePointMode.PointCount;
+                                m_ModePCPointCount = 100;
+                                BuildPath();
+                                return;
                             }
-
+                             * */
                         }
 
                         var pt = SplineValueAtN(curPct);
@@ -1277,7 +1320,7 @@ public static partial class ioDriver
 
                     if (pathN.Count < 2)
                     {
-                        Log.Warn("Segment Length too long.  (SegmentLength = '" + SegmentLength + "')");
+                        Log.Warn("Segment Length too long.  (ModeSLSegmentLen = '" + ModeSLSegmentLen + "')");
                         PathPointsVN = new VecN[] { m_FrameVN[0], m_FrameVN[m_FrameVN.Count - 1] };
                     }
                     else
@@ -1293,14 +1336,11 @@ public static partial class ioDriver
                         var toPct = progressLen / totalLength;
                         m_PathSegments[idx] = new Segment(idx, frmPct, toPct, lengths[idx]);
                     }
-
-                    PathPoints = VecN.ToArray<T>(PathPointsVN);
-                    return true;
                 }
-                else
+                else if(m_PointMode == SplinePointMode.MinAngle)
                 {
 
-                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? (SplineLengthEstimated() / 500f) : m_MinAngleMinLength;
+                    var minLen = (m_ModeMAMinLength == MA_LENGTH_AUTO) ? (SplineLengthEstimated() / 500f) : m_ModeMAMinLength;
                     var ptsN = new List<VecN> { m_FrameVN[0] };
                     var pctList = new List<float> { 0f };
                     for (int idx = 1; idx < m_FrameVN.Count; ++idx)
@@ -1310,27 +1350,24 @@ public static partial class ioDriver
 
                     for (int idx = 1; idx < pctList.Count; ++idx)
                     {
-                        ptsN.AddRange(BuildMinAngle2(pctList[idx - 1], pctList[idx], m_MinAngle, minLen));
+                        ptsN.AddRange(BuildMinAngle2(pctList[idx - 1], pctList[idx], m_ModeMAMinAngle, minLen));
                         ptsN.Add(ToVecN(SplineValueAt(pctList[idx])));
                     }
 
                     /* -- Entire path no split (unless closed, split in half)
-                    var minLen = (m_MinAngleMinLength == MA_LENGTH_AUTO) ? (SplineLengthEstimated() / 500f) : m_MinAngleMinLength;
+                    var minLen = (m_ModeMAMinLength == MA_LENGTH_AUTO) ? (SplineLengthEstimated() / 500f) : m_ModeMAMinLength;
                     var ptsN = new List<VecN> { m_FrameVN[0] };
                     if (!Closed)
                     {
-                        ptsN.AddRange(BuildMinAngle2(0f, 1f, m_MinAngle, minLen));
+                        ptsN.AddRange(BuildMinAngle2(0f, 1f, m_ModeMAMinAngle, minLen));
                     }
                     else
                     {
-                        ptsN.AddRange(BuildMinAngle2(0,0.5f, m_MinAngle, minLen));
-                        ptsN.AddRange(BuildMinAngle2(0.5f,1f,m_MinAngle,minLen));
+                        ptsN.AddRange(BuildMinAngle2(0,0.5f, m_ModeMAMinAngle, minLen));
+                        ptsN.AddRange(BuildMinAngle2(0.5f,1f,m_ModeMAMinAngle,minLen));
                     }
                     ptsN.Add(SplineValueAtN(1f));
                      */
-
-                    var pts = new T[ptsN.Count];
-                    pts[0] = ptsN[0].To<T>();
 
 
                     var totLen = 0f;
@@ -1341,13 +1378,12 @@ public static partial class ioDriver
                         var curLen = (ptsN[idx] - ptsN[idx - 1]).Magnitude;
                         totLen += curLen;
                         lengths[idx - 1] = curLen;
-                        pts[idx] = ptsN[idx].To<T>();
                     }
 
                     //Build segments
                     var progressLen = 0f;
 
-                    m_PathSegments = new Segment[pts.Length - 1];
+                    m_PathSegments = new Segment[ptsN.Count - 1];
                     for (int idx = 0; idx < m_PathSegments.Length; ++idx)
                     {
                         var frmPct = progressLen / totLen;
@@ -1356,12 +1392,9 @@ public static partial class ioDriver
                         m_PathSegments[idx] = new Segment(idx, frmPct, toPct, lengths[idx]);
                     }
 
-                    PathPoints = pts;
                     PathPointsVN = ptsN.ToArray();
-                    return true;
                 }
-
-
+                PathPoints = VecN.ToArray<T>(PathPointsVN);
             }
 
 
@@ -1901,7 +1934,7 @@ public static partial class ioDriver
             }*/
 
             /// Updates cubic values then calls base spline <see cref="Spline{T}.BuildPath"/>
-            protected override bool BuildPath()
+            protected override void BuildPath()
             {
                 m_Cubs = new CubicValue[m_FrameVN[0].DimCount][];
                 foreach (var dim in m_DimsToSpline)
@@ -1910,7 +1943,7 @@ public static partial class ioDriver
                         CalcNatCubic(m_FrameVN, dim - 1) :
                         CalcNatCubicClosed(m_FrameVN, dim - 1);
 
-                return base.BuildPath();
+                base.BuildPath();
             }
 
 
@@ -2120,7 +2153,7 @@ public static partial class ioDriver
             }*/
 
             /// Builds PathPoints and PathSegments
-            protected override bool BuildPath()
+            protected override void BuildPath()
             {
                 var points = new List<VecN>(m_FrameVN);
                 if (Closed)
@@ -2128,7 +2161,7 @@ public static partial class ioDriver
                 PathPointsVN = points.ToArray();
                 PathPoints = VecN.ToArray<T>(points);
                 m_PathSegments = m_FrameSegments;
-                return true;
+                return;
             }
         }
 
