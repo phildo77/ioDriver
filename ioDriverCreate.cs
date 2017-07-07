@@ -224,11 +224,11 @@ public static partial class ioDriver
     }
 
     /// <summary>
-    /// Create new driver chain from provided list of drivers.
+    /// Create new driver chain from provided set of drivers.
     /// </summary>
     /// <param name="_chain">List of drivers to make chain</param>
     /// <returns>New chain object</returns>
-    public static DChain Chain(List<DBase> _chain)
+    public static DChain Chain(IEnumerable<DBase> _chain)
     {
         return new DChain(_chain);
     }

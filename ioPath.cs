@@ -452,7 +452,7 @@ public static partial class ioDriver
         /// <param name="_closed">Closed path?</param>
         /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New linear path object</returns>
-        public static Linear<T> CreateLinear<T>(bool _closed, List<T> _waypoints, bool _autoBuild = true)
+        public static Linear<T> CreateLinear<T>(bool _closed, IEnumerable<T> _waypoints, bool _autoBuild = true)
         {
             var path = new Linear<T>(_waypoints, _closed, _autoBuild);
             if (_autoBuild) path.Build();
@@ -481,7 +481,7 @@ public static partial class ioDriver
         /// <param name="_closed">Closed spline?</param>
         /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New Bezier spline object</returns>
-        public static Bezier<T> CreateBezier<T>(bool _closed, List<T> _frameWaypoints, bool _autoBuild = true)
+        public static Bezier<T> CreateBezier<T>(bool _closed, IEnumerable<T> _frameWaypoints, bool _autoBuild = true)
         {
             var path = new Bezier<T>(_frameWaypoints, _closed, _autoBuild);
             if (_autoBuild) path.Build();
@@ -511,7 +511,7 @@ public static partial class ioDriver
         /// <param name="_closed">Closed spline?</param>
         /// <param name="_autoBuild">Enable Autobuild?</param>
         /// <returns>New cubic spline object</returns>
-        public static Cubic<T> CreateCubic<T>(bool _closed, List<T> _frameWaypoints, bool _autoBuild = true)
+        public static Cubic<T> CreateCubic<T>(bool _closed, IEnumerable<T> _frameWaypoints, bool _autoBuild = true)
         {
             var path = new Cubic<T>(_frameWaypoints, _closed, _autoBuild);
             if (_autoBuild) path.Build();
@@ -1532,7 +1532,7 @@ public static partial class ioDriver
             /// <summary>
             /// Constructor.  Note that <see cref="Base{T}.Build()"/> is not called during construction. 
             /// Use static factory methods.
-            /// <seealso cref="CreateBezier{T}(bool,List{T},bool)"/>
+            /// <seealso cref="CreateBezier{T}(bool,IEnumerable{T},bool)"/>
             /// <seealso cref="CreateBezier{T}(Base{T},bool)"/>
             /// </summary>
             public Bezier(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
@@ -1976,7 +1976,7 @@ public static partial class ioDriver
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build()"/> is not called during construction.
             /// Use static factory methods.
-            /// <seealso cref="CreateCubic{T}(bool, List{T},bool)"/>
+            /// <seealso cref="CreateCubic{T}(bool, IEnumerable{T},bool)"/>
             /// <seealso cref="CreateCubic{T}(Base{T},bool)"/>
             /// </summary>
             public Cubic(IEnumerable<T> _frameWaypoints, bool _closed, bool _autoBuild)
@@ -2194,7 +2194,7 @@ public static partial class ioDriver
             /// <summary>
             /// Constructor.  Note <see cref="Base{T}.Build"/> is not called during construction.
             /// Use static factory methods.
-            /// <seealso cref="CreateLinear{T}(bool,List{T},bool)"/>
+            /// <seealso cref="CreateLinear{T}(bool,IEnumerable{T},bool)"/>
             /// <seealso cref="CreateLinear{T}(Base{T},bool)"/>
             /// </summary>
             public Linear(IEnumerable<T> _waypoints, bool _closed, bool _autoBuild)

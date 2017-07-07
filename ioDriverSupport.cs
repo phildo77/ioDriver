@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
 using System.Diagnostics;
+using System.Linq;
 
 public static partial class ioDriver
 {
@@ -67,7 +68,7 @@ public static partial class ioDriver
         public DChain(ioDriver.DBase _driver) { m_Chain.Add(_driver); }
 
         /// Create driver chain series from list of drivers.
-        public DChain(List<ioDriver.DBase> _chain) { m_Chain = _chain; }
+        public DChain(IEnumerable<ioDriver.DBase> _chain) { m_Chain = _chain.ToList(); }
 
         /// Create driver chain series from params
         public DChain(params ioDriver.DBase[] _chain) { m_Chain = ToList(_chain); }

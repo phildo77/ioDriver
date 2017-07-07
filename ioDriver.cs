@@ -32,7 +32,7 @@ public static partial class ioDriver
 
     private static float m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
     private static float m_TimescaleGlobal = Defaults.Timescale;
-    private static bool m_UnityMgrPresent = false;
+    //private static bool m_UnityMgrPresent = false;
 
     #endregion Fields
 
