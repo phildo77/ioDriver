@@ -774,8 +774,8 @@ public static partial class ioDriver
 
             private static VecN LerpPathN(float _pct, VecN[] _points, Segment[] _segments, float _pathLen, bool _closed)
             {
-                if (_pct == 0f) return _points[0];
-                if (_pct == 1f) return _closed ? _points[0] : _points[_points.Length - 1];
+                if (_pct <= 0f) return _points[0];
+                if (_pct >= 1f) return _closed ? _points[0] : _points[_points.Length - 1];
 
                 var tgtLen = _pathLen * _pct;
 
