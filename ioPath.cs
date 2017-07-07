@@ -1234,12 +1234,7 @@ public static partial class ioDriver
             /// Populates <see cref="Base{T}.PathPoints"/> and <see cref="Base{T}.PathSegments"/>
             protected override void BuildPath()
             {
-                Func<float, float, float> glptFuncSq =
-                    (_fromPct, _toPct) =>
-                        (SplineValueAtN(_fromPct) - SplineValueAtN(_toPct)).MagnitudeSquared;
-
-
-                var timeStamp = System.DateTime.UtcNow.Ticks;
+                //var timeStamp = System.DateTime.UtcNow.Ticks;
 
                 if (PointMode == SplinePointMode.PointCount)
                 {
@@ -1253,7 +1248,7 @@ public static partial class ioDriver
                     {
                         var toPct = (float) (idx)/ (float)(m_ModePCPointCount - 1);
                         ptsN.Add(SplineValueAtN(toPct));
-                        segs.Add(new Segment(idx, frmPct, toPct, (ptsN[idx - 1] - ptsN[idx]).Magnitude));
+                        segs.Add(new Segment(idx - 1, frmPct, toPct, (ptsN[idx - 1] - ptsN[idx]).Magnitude));
                         frmPct = toPct;
                     }
 
@@ -1266,6 +1261,10 @@ public static partial class ioDriver
                         m_ModeSLSegmentLen = GetDefaultSegmentLength();
                     if (m_ModeSLSegmentAcc <= 0 || m_ModeSLSegmentAcc >= 1f)
                         m_ModeSLSegmentAcc = 0.3f;
+
+                    Func<float, float, float> glptFuncSq =
+                    (_fromPct, _toPct) =>
+                        (SplineValueAtN(_fromPct) - SplineValueAtN(_toPct)).MagnitudeSquared;
 
                     var tgtLenMinSq = (m_ModeSLSegmentLen - m_ModeSLSegmentLen * m_ModeSLSegmentAcc)
                         * (m_ModeSLSegmentLen - m_ModeSLSegmentLen * m_ModeSLSegmentAcc);
