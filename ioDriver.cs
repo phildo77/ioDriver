@@ -869,84 +869,105 @@ public static partial class ioDriver
 
         #region Properties
 
+        /// <summary>
         /// True if the driver was cancelled by a call to <see cref="Cancel()"/>
+        /// </summary>
         public bool Cancelled
         {
             get;
             private set;
         }
 
+        /// <summary>
         /// Gets/sets this driver's conflict behavoir for when another driver with 
         /// the same <see cref="DBase.TargetInfo"/> and/or with the same Name is detected.  Conflict check is 
         /// done when the driver is <see cref="ioDriverFluency.Go{T}">started</see> 
         /// and <see cref="TargetObject"/> is not set to <see cref="ioDriver.TargetInfo.TARGET_NONE"/>.
         /// <seealso cref="ioDriver.ConflictBehavior"/>  
+        /// </summary>
         public ConflictBehavior conflictBehavior
         {
             get;
             set;
         }
 
+        /// <summary>
         /// Get/Set this driver into debug mode.
+        /// </summary>
         public bool DebugEnable
         {
             get;
             set;
         }
 
+        /// <summary>
         /// Time in seconds this driver will wait after Go() is called before starting.
+        /// </summary>
         public float Delay
         {
             get;
             set;
         }
 
+        /// <summary>
         /// This driver's total duration in seconds.
+        /// </summary>
         public float Duration
         {
             get;
             set;
         }
 
+        /// <summary>
         /// Time in seconds passed since started, not including time passed while paused.
+        /// </summary>
         public float ElapsedTime
         {
             get;
             private set;
         }
 
+        /// <summary>
         /// True if the driver has completed running its duration.  False otherwise.
+        /// </summary>
         public bool Finished
         {
             get;
             private set;
         }
 
+        /// <summary>
         /// Generated Unique ID
+        /// </summary>
         public string ID
         {
             get;
             protected set;
         }
 
+        /// <summary>
         /// User defined name.  Must be unique among all running drivers.  If not specified in the contructor will be
         /// automatically assigned.
+        /// </summary>
         public string Name
         {
             get;
             set;
         }
 
+        /// <summary>
         /// Override for a string representation of driver type.
+        /// </summary>
         public virtual string NiceType
         {
             get { return "Base"; }
         }
 
-        /// Get / Set the pause state for this driver.  Pause events 
+        /// <summary>/// Get / Set the pause state for this driver.  Pause events 
         /// will not fire if the driver has not been started, 
         /// has been cancelled or has finished.
         /// If set to true the driver will not drive nor will it account for any time passage.
+        /// </summary>
         public bool Paused
         {
             get { return m_Paused; }
@@ -980,35 +1001,45 @@ public static partial class ioDriver
             }
         }
 
+        /// <summary>
         /// Remaining time this driver will be in a <see cref="Paused"/> state.  
         /// <seealso cref="PauseFor(float)"/><seealso cref="Paused"/>
+        /// </summary>
         public float PauseDuration
         {
             get;
             set;
         }
 
+        /// <summary>
         /// Time in seconds remaining until duration is reached.
+        /// </summary>
         public float RemainingTime
         {
             get { return Duration - ElapsedTime; }
         }
 
+        /// <summary>
         /// Time in seconds since last update was called for this driver.
+        /// </summary>
         public float SecsSinceLastUpdate
         {
             get;
             private set;
         }
 
+        /// <summary>
         /// Indicates whether this driver has been started..
+        /// </summary>
         public bool Started
         {
             get;
             private set;
         }
 
+        /// <summary>
         /// User defined tag.  Does not need to be unique. Cannot be null.
+        /// </summary>
         public object Tag
         {
             get { return m_Tag; }
@@ -1025,7 +1056,9 @@ public static partial class ioDriver
             }
         }
 
+        /// <summary>
         /// General target information for this driver.  Intended for collisions, tracking with objects and debug.
+        /// </summary>
         public TargetInfo TargetInfo
         {
             get { return m_TargetInfo; }
@@ -1040,13 +1073,17 @@ public static partial class ioDriver
             }
         }
 
+        /// <summary>
         /// Shorthand access to <see cref="ioDriver.TargetInfo.TargetObject"/>.
+        /// </summary>
         public object TargetObject
         {
             get { return m_TargetInfo.TargetObject; }
         }
 
+        /// <summary>
         /// Get/Set driver's local timescale.  Not used if <see cref="UseTimescaleLocal"/> is set to false (default).  Setting this also sets <see cref="UseTimescaleLocal"/> to true;
+        /// </summary>
         public float TimescaleLocal
         {
             get { return m_TimescaleLocal; }
@@ -1062,7 +1099,9 @@ public static partial class ioDriver
             }
         }
 
+        /// <summary>
         /// Set to true to use local timescale mode, false to use global timescale. <seealso cref="DBase.TimescaleLocal"/> <seealso cref="TimescaleGlobal"/>
+        /// </summary>
         public bool UseTimescaleLocal
         {
             get;
@@ -1209,7 +1248,10 @@ public static partial class ioDriver
             Cancelled = false;
         }
 
+        /// <summary>
         /// String representation of Driver. (Name, ID, NiceType, TargetInfo)
+        /// </summary>
+        /// <returns>Driver info string</returns>
         public override string ToString()
         {
             var sb = new StringBuilder();
@@ -1225,13 +1267,17 @@ public static partial class ioDriver
             Manager.Init();
         }
 
+        /// <summary>
         /// Override for driver core functionality
+        /// </summary>
         protected virtual void Update()
         {
         }
 
+        /// <summary>
         /// Optional debug mode override.  Will be called if <see cref="DebugEnable"/> or <see cref="ioDriver.DebugEnableGlobal"/> is true.
         /// If not overridden, <see cref="Update()"/> is called.
+        /// </summary>
         protected virtual void UpdateDebug()
         {
             Update();
