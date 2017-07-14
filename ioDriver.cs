@@ -150,10 +150,12 @@ public static partial class ioDriver
         Custom
     }
 
-    /// Immediate mode events for <see cref="DBase"/>.  
+    /// <summary>
+    /// /// Immediate mode events for <see cref="DBase"/>.  
     /// For use with <see cref="ioDriverFluency.SetAddEvent{T}(T,ioDriver.Events,ioDriver.Event.Handler{T})"/>
     /// <seealso cref="DBase.OnStart"/><seealso cref="DBase.OnFinish"/><seealso cref="DBase.OnCancel"/>
     /// <seealso cref="DBase.OnPause"/><seealso cref="DBase.OnUnpause"/><seealso cref="DBase.OnPauseToggle"/>
+    /// </summary>
     public enum Events
     {
         /// See <see cref="DBase.OnStart"/>
@@ -170,10 +172,12 @@ public static partial class ioDriver
         OnPauseToggle
     }
 
+    /// <summary>
     /// Immediate mode events for <see cref="ILoopable"/>
     /// For use with <see cref="ioDriverFluency.SetAddEvent{T}(T,ioDriver.EventsLoop,ioDriver.Event.Handler{T})"/>
     /// <seealso cref="ILoopable.OnLoopCycleComplete"/><seealso cref="ILoopable.OnLoopPingPongForeComplete"/>
     /// <seealso cref="ILoopable.OnLoopPingPongBackComplete"/>
+    /// </summary>
     public enum EventsLoop
     {
         /// See <see cref="ILoopable.OnLoopCycleComplete"/>
@@ -184,7 +188,9 @@ public static partial class ioDriver
         OnLoopPingPongBackComplete
     }
 
+    /// <summary>
     /// Used for <see cref="ILoopable"/> drivers.
+    /// </summary>
     public enum LoopType
     {
         /// Perform driver with one cycle over set <see cref="DBase.Duration"/>.
@@ -195,7 +201,9 @@ public static partial class ioDriver
         PingPong,
     }
 
+    /// <summary>
     /// Ping Pong loop specific progression direction.
+    /// </summary>
     public enum PingPongDir
     {
         /// Loop's cycle progress is moving from 0 to 1.
@@ -208,19 +216,28 @@ public static partial class ioDriver
 
     #region Delegates
 
-    /// Injector delegate used for <see cref="DTransfer{TTar,TDri}.TargetInjector"/> 
+    /// <summary>
+    /// /// Injector delegate used for <see cref="DTransfer{TTar,TDri}.TargetInjector"/> 
     /// and <see cref="DTransfer{TTar,TDri}.DriveInjector"/>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="_value"></param>
+    /// <returns></returns>
     public delegate T Injector<T>(T _value);
 
+    /// <summary>
     /// Delegate used for <see cref="OnPump"/> event.
+    /// </summary>
     public delegate void OnPumpAction();
 
     #endregion Delegates
 
     #region Nested Interfaces
 
+    /// <summary>
     /// Interface for loopable drivers.
     /// <seealso cref="ioDriver.DTween{TTar}"/><seealso cref="ioDriver.DSpeed{TTar}"/>
+    /// </summary>
     public interface ILoopable
     {
         #region Events
@@ -302,7 +319,9 @@ public static partial class ioDriver
         #endregion Methods
     }
 
+    /// <summary>
     /// Untyped interface for <see cref="DTransfer{TTar, TDri}"/>
+    /// </summary>
     public interface ITransfer
     {
         #region Properties
@@ -344,15 +363,19 @@ public static partial class ioDriver
 
     #region Events
 
+    /// <summary>
     /// Fired every "pump" operation.  Note that this is not fired if not enough time has passed to meet
     /// the current <see cref="MaxUpdateFrequency"/> setting.
+    /// </summary>
     public static event OnPumpAction OnPump;
 
     #endregion Events
 
     #region Properties
 
+    /// <summary>
     /// When set to true ALL drivers are debug tracked and will run in Debug mode.  <see cref="DBase.UpdateDebug()"/>
+    /// </summary>
     public static bool DebugEnableGlobal
     {
         get { return m_DebugEnableGlobal; }
@@ -378,16 +401,20 @@ public static partial class ioDriver
         }
     }
 
+    /// <summary>
     /// Has the ioDriver initialization code been executed?
+    /// </summary>
     public static bool InitDone
     {
         get;
         private set;
     }
 
+    /// <summary>
     /// Get or set the maximum frequency for ioDriver to pump all running drivers and fire events.
     /// IE. if the maximum frequency is set to 60 (Hz) then drivers and events will only be updated at a maximum
     /// of 60 times per second, or maximum once every 16.67 milliseconds.  Cannot be less than or equal to zero.
+    /// </summary>
     public static float MaxUpdateFrequency
     {
         get { return m_MaxUpdateFrequency; }
@@ -444,32 +471,46 @@ public static partial class ioDriver
 
     #region Methods
 
+    /// <summary>
     /// Gets a count of all running drivers.
+    /// </summary>
+    /// <returns></returns>
     public static int DebugGetActiveDriverCount()
     {
         return DriversByID.Count;
     }
 
+    /// <summary>
     /// Gets an array of all drivers in debug track mode.
+    /// </summary>
+    /// <returns></returns>
     public static DBase[] DebugGetAllTracked()
     {
         return DriversDebugTracked.ToArray();
     }
 
+    /// <summary>
     /// Destroy all currently running drivers
+    /// </summary>
     public static void DestroyAll()
     {
         foreach (var driver in DriversByID.Values)
             driver.Destroy();
     }
 
+    /// <summary>
     /// Gets a dictionary of all running drivers keyed by <see cref="DBase.ID"/>.
+    /// </summary>
+    /// <returns></returns>
     public static Dictionary<string, DBase> GetAllDriversByID()
     {
         return DriversByID.ToDictionary(_pair => _pair.Key, _pair => _pair.Value);
     }
 
+    /// <summary>
     /// Gets a dictionary of all running drivers keyed by <see cref="DBase.Name"/>
+    /// </summary>
+    /// <returns></returns>
     public static Dictionary<string, DBase> GetAllDriversByName()
     {
         return DriversByID.ToDictionary(_pair => _pair.Value.Name, _pair => _pair.Value);
@@ -556,8 +597,10 @@ public static partial class ioDriver
         Hooks.UpdateManager();
     }
 
+    /// <summary>
     /// Disregard any accrued time since the last update.
     /// Tells the next update that no time has passed since the last call to update.
+    /// </summary>
     public static void ResetTimestamp()
     {
         Hooks.ResetTimestamp();
@@ -792,7 +835,9 @@ public static partial class ioDriver
 
     #region Nested Types
 
+    /// <summary>
     /// Core untyped driver functionality
+    /// </summary>
     public class DBase
     {
         #region Fields
@@ -1566,7 +1611,9 @@ public static partial class ioDriver
         #endregion Other
     }
 
+    /// <summary>
     /// Controls Debug messaging
+    /// </summary>
     public static class Debug
     {
         #region Fields
@@ -1871,7 +1918,9 @@ public static partial class ioDriver
         #endregion Methods
     }
 
+    /// <summary>
     /// Easing functionality
+    /// </summary>
     public static class Easing
     {
         #region Methods
@@ -2227,8 +2276,10 @@ public static partial class ioDriver
 
         #region Constructors
 
+        /// <summary>
         /// Sets <see cref="TargetObject"/>, <see cref="MetaDesc"/> and <see cref="MetaName"/>
         /// to <see cref="TARGET_NONE"/>
+        /// </summary>
         public TargetInfo()
         {
             MetaDesc = TARGET_NONE.ToString();
@@ -2236,7 +2287,11 @@ public static partial class ioDriver
             m_TargetObject = TARGET_NONE;
         }
 
+        /// <summary>
         /// Create target info using method info.
+        /// </summary>
+        /// <param name="_mi"></param>
+        /// <param name="_targetObject"></param>
         public TargetInfo(MethodInfo _mi, object _targetObject)
         {
             MetaName = _mi.Name;
@@ -2245,7 +2300,11 @@ public static partial class ioDriver
             TargetObject = _targetObject;
         }
 
+        /// <summary>
         /// Create target info using strings
+        /// </summary>
+        /// <param name="_metaName"></param>
+        /// <param name="_targetObject"></param>
         public TargetInfo(string _metaName, object _targetObject)
         {
             MetaName = _metaName;

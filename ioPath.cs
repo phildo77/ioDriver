@@ -1034,7 +1034,7 @@ public static partial class ioDriver
             /// Backing field for <see cref="ModeSLSegmentAcc"/>
             private float m_ModeSLSegmentAcc;
 
-            private SplinePointMode m_PointMode;
+            private SplinePointMode m_PointMode = SplinePointMode.PointCount;
 
             /// <summary>
             /// Get / Set the build mode. <seealso cref="SplinePointMode"/>
@@ -1134,6 +1134,9 @@ public static partial class ioDriver
                 m_DimsToSpline = CheckDims(null);
                 m_ModeSLSegmentLen = GetDefaultSegmentLength();
                 m_ModeMAMinLength = MA_LENGTH_AUTO;
+                m_ModeMAMinAngle = 5f;
+                m_ModeSLSegmentAcc = 0.25f;
+
             }
 
             /// Get / Set target segment length for mode <see cref="SplinePointMode.SegmentLength"/>.
@@ -1159,9 +1162,11 @@ public static partial class ioDriver
                 }
             }
 
+            /// <summary>
             /// Get / Set target segment length accuracy for mode <see cref="SplinePointMode.SegmentLength"/>.
             /// ie. Segments will be of length of 2.0f +/- 0.1 with <see cref="ModeSLSegmentLen"/> of 2.0f and Segment Accuracy of 0.05
             /// Will not rebuild if current <see cref="PointMode"/> is other than <see cref="SplinePointMode.SegmentLength"/>
+            /// </summary>
             public float ModeSLSegmentAcc
             {
                 get { return m_ModeSLSegmentAcc; }

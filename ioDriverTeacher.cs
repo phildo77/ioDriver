@@ -17,8 +17,9 @@ public static partial class ioDriver
 
         private static Dictionary<Type, HashSet<TeachType>> m_TaughtTypes;
 
-
+        /// <summary>
         /// Get a dictionary containing sets of known taught functions indexed by Type.
+        /// </summary>
         public static Dictionary<Type, HashSet<TeachType>> TaughtTypes
         {
             get
@@ -116,12 +117,29 @@ public static partial class ioDriver
             m_InitDone = true;
         }
 
+        /// <summary>
         /// Basic LERP float function: (_from + (_to - _from) * _pct)
+        /// </summary>
+        /// <param name="_from"></param>
+        /// <param name="_to"></param>
+        /// <param name="_pct"></param>
+        /// <returns></returns>
         public static float Lerpf(float _from, float _to, float _pct) { return (_from + (_to - _from) * _pct); }
+        
+        /// <summary>
         /// Basic ILERP float function: (_val - _from) / (_to - _from)
+        /// </summary>
+        /// <param name="_from"></param>
+        /// <param name="_to"></param>
+        /// <param name="_val"></param>
+        /// <returns></returns>
         public static float ILerpf(float _from, float _to, float _val) { return (_val - _from) / (_to - _from); }
         
+        /// <summary>
         /// Delegate for getting T object's zero equivalent.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
         public delegate T FuncZero<out T>();
 
         /// <summary>
@@ -386,7 +404,11 @@ public static partial class ioDriver
 
         }
 
+        /// <summary>
         /// Retrieve a list of known Teacher functions for specified type.
+        /// </summary>
+        /// <param name="_type"></param>
+        /// <returns></returns>
         public static List<TeachType> GetKnownTaughtFrom(Type _type)
         {
             var known = new List<TeachType>();
@@ -436,7 +458,9 @@ public static partial class ioDriver
              * */
         }
 
+        /// <summary>
         /// Teachable function types
+        /// </summary>
         public enum TeachType
         {
             /// See <see cref="FuncAdd{T}"/>

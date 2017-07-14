@@ -3,38 +3,75 @@ using System.Collections.Generic;
 
 public static partial class ioDriver 
 {
-	/// Interface for managed events.
+    /// <summary>
+    /// Interface for managed events.
+    /// </summary>
 	public interface IEvent
 	{
-		/// Event ID
+        /// <summary>
+        /// Event ID
+        /// </summary>
 		string ID { get; }
 
-		/// User description
+        /// <summary>
+        /// User description
+        /// </summary>
 		string Description { get; set; }
-		/// Is this event enabled?  Will not fire if false, even if the condition returns true.
-		bool Enabled { get; set; }
-		/// How many times will this event fire before being disposed?
-		int FireCount { get; set; }
-		/// Event Priority.  During each pump cycle.  The lowest priority values will have their conditions checked first.
-		uint Priority { get; set; }
-		/// Target object
-		object Target { get; }
+		
+        /// <summary>
+        /// Is this event enabled?  Will not fire if false, even if the condition returns true.
+        /// </summary>
+        bool Enabled { get; set; }
 
-		/// Fire this event.  FireCount will be reduced by 1.
+        /// <summary>
+        /// How many times will this event fire before being disposed?
+        /// </summary>
+		int FireCount { get; set; }
+		
+        /// <summary>
+        /// Event Priority.  During each pump cycle.  The lowest priority values will have their conditions checked first.
+        /// </summary>
+        uint Priority { get; set; }
+		
+        /// <summary>
+        /// Target object
+        /// </summary>
+        object Target { get; }
+
+        /// <summary>
+        /// Fire this event.  FireCount will be reduced by 1.
+        /// </summary>
 		void Fire();
 
-		/// Run the condition function and get its result.
+        /// <summary>
+        /// Run the condition function and get its result.
+        /// </summary>
+        /// <returns></returns>
 		bool TestCond();
 
-		/// Fluency method.  <see cref="Priority"/>
+        /// <summary>
+        /// Fluency method.  <see cref="Priority"/>
+        /// </summary>
+        /// <param name="_priority"></param>
+        /// <returns></returns>
 		IEvent SetPriority(uint _priority);
-		/// Fluency method.  <see cref="FireCount"/>
-		IEvent SetFireCount(int _fireCount);
-		/// Fluency method.  <see cref="Enabled"/>
-		IEvent SetEnabled(bool _enabled);
+		/// <summary>
+        /// Fluency method.  <see cref="FireCount"/>
+        /// </summary>
+		/// <param name="_fireCount"></param>
+		/// <returns></returns>
+        IEvent SetFireCount(int _fireCount);
+		/// <summary>
+        /// Fluency method.  <see cref="Enabled"/>
+        /// </summary>
+		/// <param name="_enabled"></param>
+		/// <returns></returns>
+        IEvent SetEnabled(bool _enabled);
 	}
 
-	/// Event related data
+    /// <summary>
+    /// Event related data
+    /// </summary>
 	public static class Event
 	{
 	    static Event()
@@ -42,7 +79,9 @@ public static partial class ioDriver
 	        ioDriver.Init();
 	    }
 
-		/// Constant representing infinite event fire count.
+        /// <summary>
+        /// Constant representing infinite event fire count.
+        /// </summary>
 		public const int FIRE_COUNT_INFINITE = -1;
 		private const string DESC_USER_EVENT = "User Event";
 

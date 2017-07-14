@@ -15,8 +15,10 @@ public static partial class ioDriver
     {
         private static Dictionary<string, Tuple<string, Stopwatch>> m_ProfilerData =
             new Dictionary<string, Tuple<string, Stopwatch>>();
-
+        /// <summary>
         /// Begin profile timer with specified label.
+        /// </summary>
+        /// <param name="_label">Profiler Identifier</param>
         public static void Begin(string _label)
         {
             Stopwatch watch = new Stopwatch();
@@ -29,10 +31,13 @@ public static partial class ioDriver
             m_ProfilerData.Add(_label, new Tuple<string, Stopwatch>(_label, watch));
         }
 
+        /// <summary>
         /// End profiling with specified label and report result via <see cref="Log.Info"/>.
+        /// </summary>
+        /// <param name="_label">Profiler Identifier</param>
         public static void End(string _label)
         {
-            if (m_ProfilerData.ContainsKey(_label))
+            if (!m_ProfilerData.ContainsKey(_label))
             {
                 Log.Err("Profiler does not contain key: " + _label);
                 return;
@@ -61,19 +66,33 @@ public static partial class ioDriver
         private readonly List<ioDriver.DBase> m_Chain = new List<ioDriver.DBase>();
         private readonly Dictionary<ioDriver.DBase, List<DChain>> m_Branches = new Dictionary<ioDriver.DBase, List<DChain>>();
 
+        /// <summary>
         /// Create empty driver chain.
+        /// </summary>
         public DChain() { }
 
+        /// <summary>
         /// Create driver chain with one driver.
+        /// </summary>
+        /// <param name="_driver">Driver at start of chain</param>
         public DChain(ioDriver.DBase _driver) { m_Chain.Add(_driver); }
 
+        /// <summary>
         /// Create driver chain series from list of drivers.
+        /// </summary>
+        /// <param name="_chain">Enumerated drivers in chain order</param>
         public DChain(IEnumerable<ioDriver.DBase> _chain) { m_Chain = _chain.ToList(); }
 
+        /// <summary>
         /// Create driver chain series from params
+        /// </summary>
+        /// <param name="_chain">Enumerated drivers in chain order</param>
         public DChain(params ioDriver.DBase[] _chain) { m_Chain = ToList(_chain); }
 
+        /// <summary>
         /// Add driver to end of chain
+        /// </summary>
+        /// <param name="_driver">Driver to add</param>
         public void Add(ioDriver.DBase _driver) { m_Chain.Add(_driver); }
 
         /// <summary>
@@ -105,7 +124,9 @@ public static partial class ioDriver
             Log.Err("ioDriver:Chain:AddChainTo - Driver does not exist in chain!  Driver '" + _driver.Name + "' requested.");
         }
 
+        /// <summary>
         /// Start this chain
+        /// </summary>
         public void Go()
         {
             if (m_Chain.Count == 0)
@@ -275,12 +296,27 @@ public static partial class ioDriver
 /// </summary>
 public static partial class ioMath
 {
+    /// <summary>
     /// Returns radians equivalent of _degrees.
+    /// </summary>
+    /// <param name="_degrees"></param>
+    /// <returns></returns>
     public static float ToRadians(float _degrees) { return (_degrees / 360f) * 2 * (float)Math.PI; }
+
+    /// <summary>
     /// Returns degrees equivalent of _radians.
+    /// </summary>
+    /// <param name="_radians"></param>
+    /// <returns></returns>
     public static float ToDegrees(float _radians) { return _radians * 360 / (2 * (float)Math.PI); }
 
+    /// <summary>
     /// Floating point equality check with precision.
+    /// </summary>
+    /// <param name="a"></param>
+    /// <param name="b"></param>
+    /// <param name="epsilon"></param>
+    /// <returns></returns>
     public static bool EqualsApprox(float a, float b, float epsilon = 0.0001f)
     {
         float absA = Math.Abs(a);

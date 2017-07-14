@@ -11,8 +11,9 @@ public static partial class ioDriver
 	/// <typeparam name="TTar">Target/Driver Type</typeparam>
 	public class DDirect<TTar> : DTransfer<TTar, TTar>
 	{
-
-		/// Get string representation of driver type
+        /// <summary>
+        /// Get string representation of driver type
+        /// </summary>
 		public override string NiceType { get { return "Direct<" + typeof(TTar) + ">"; } }
 
 		/// <summary>
@@ -27,7 +28,11 @@ public static partial class ioDriver
 		public DDirect(Expression<Func<TTar>> _targetExpr, Func<TTar> _driver, string _name = null)
 			: base(_targetExpr, _driver, _name) { }
 
-		///  Returns <param name="_drive"/>.  See <see cref="DTransfer{TTar,TDri}.DriveToTarget"/>
+        /// <summary>
+        ///  Returns <param name="_drive"/>.  See <see cref="DTransfer{TTar,TDri}.DriveToTarget"/>
+        /// </summary>
+        /// <param name="_drive"></param>
+        /// <returns></returns>
 		protected override TTar DriveToTarget(TTar _drive) { return _drive; }
 
 	}
@@ -44,30 +49,49 @@ public static partial class ioDriver
 		private Func<float, float> m_EaseCache;
 		private static bool m_CacheDone = false;
 
-		/// Drive value "from" / "A" map point.
+        /// <summary>
+        /// Drive value "from" / "A" map point.
+        /// </summary>
 		protected TDri m_DriveMapFrom;
-		/// Drive value "to" / "B" map point.
-		protected TDri m_DriveMapTo;
-		/// Custom ease type key.  <see cref="Easing.DefineCustomEasingFunc"/>
-		protected object m_EaseTypeCustomKey;
+		/// <summary>
+        /// Drive value "to" / "B" map point.
+        /// </summary>
+        protected TDri m_DriveMapTo;
+		/// <summary>
+        /// Custom ease type key.  <see cref="Easing.DefineCustomEasingFunc"/>
+        /// </summary>
+        protected object m_EaseTypeCustomKey;
 
-		/// Minimum percentage (1 = 100%) that drive value will be clamped to.
+        /// <summary>
+        /// Minimum percentage (1 = 100%) that drive value will be clamped to.
+        /// </summary>
 		public float ClampDriveMinPct { get; set; }
-		/// Maximum percentage (1 = 100%) that drive value will be clamped to.
-		public float ClampDriveMaxPct { get; set; }
+		/// <summary>
+        /// Maximum percentage (1 = 100%) that drive value will be clamped to.
+        /// </summary>
+        public float ClampDriveMaxPct { get; set; }
 
-
-		/// Get driver's drive percent progress (debug mode)
+        /// <summary>
+        /// Get driver's drive percent progress (debug mode)
+        /// </summary>
 		public float DebugDrivePct { get; private set; }
-		/// Get driver's clamped drive percent progress (debug mode)
-		public float DebugClampedDrivePct { get; private set; }
-		/// Get driver's eased percent progress (debug mode)
-		public float DebugEasedPct { get; private set; }
+		/// <summary>
+        /// Get driver's clamped drive percent progress (debug mode)
+        /// </summary>
+        public float DebugClampedDrivePct { get; private set; }
+		/// <summary>
+        /// Get driver's eased percent progress (debug mode)
+        /// </summary>
+        public float DebugEasedPct { get; private set; }
 
-		/// See <see cref="ioDriver.EaseType"/>
-		public EaseType easeType { get; protected set; }
-		/// See <see cref="Easing.DefineCustomEasingFunc"/>
-		public object EaseTypeCustomKey
+		/// <summary>
+        /// See <see cref="ioDriver.EaseType"/>
+        /// </summary>
+        public EaseType easeType { get; protected set; }
+		/// <summary>
+        /// See <see cref="Easing.DefineCustomEasingFunc"/>
+        /// </summary>
+        public object EaseTypeCustomKey
 		{
 			get { return m_EaseTypeCustomKey; }
 			private set
@@ -142,10 +166,14 @@ public static partial class ioDriver
 		/// <returns>TTar value to send to target action.</returns>
 		protected abstract TTar PctToTarget(float _pct);
 
-		/// Core Mapped Drive to Target functionality.  Calculates percentage progress of drive
-		/// along drive map end points, clamps it (if applicable), eases it (if applicable), 
-		/// then returns the result of this value passed through <see cref="PctToTarget"/>
-		protected sealed override TTar DriveToTarget(TDri _drive)
+		/// <summary>
+        /// Core Mapped Drive to Target functionality.  Calculates percentage progress of drive
+        /// along drive map end points, clamps it (if applicable), eases it (if applicable), 
+        /// then returns the result of this value passed through <see cref="PctToTarget"/>
+        /// </summary>
+		/// <param name="_drive"></param>
+		/// <returns></returns>
+        protected sealed override TTar DriveToTarget(TDri _drive)
 		{
 			if (DebugEnable || ioDriver.DebugEnableGlobal) return DriveToTargetDebug(_drive);
 			var drivePct = m_ILerpCache(m_DriveMapFrom, m_DriveMapTo, _drive);
@@ -155,7 +183,11 @@ public static partial class ioDriver
 			return PctToTarget(easedPct);
 		}
 
-		/// Drive to Target functionality for debug mode.  (not ideal performance)
+        /// <summary>
+        /// Drive to Target functionality for debug mode.  (not ideal performance)
+        /// </summary>
+        /// <param name="_drive"></param>
+        /// <returns></returns>
 		protected TTar DriveToTargetDebug(TDri _drive)
 		{
 			DebugDrivePct = DebugClampedDrivePct = m_ILerpCache(m_DriveMapFrom, m_DriveMapTo, _drive);
@@ -230,8 +262,10 @@ public static partial class ioDriver
 		private readonly TTar m_From;
 		private readonly TTar m_To;
 
-		/// Get string representation of driver type
-		public override string NiceType { get { return "MappedSimple<" + typeof(TTar) + "," + typeof(TDri) + ">"; } }
+		/// <summary>
+        /// Get string representation of driver type
+        /// </summary>
+        public override string NiceType { get { return "MappedSimple<" + typeof(TTar) + "," + typeof(TDri) + ">"; } }
 
 
         /// <summary>
