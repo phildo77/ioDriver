@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 
@@ -2329,6 +2330,30 @@ public static partial class ioDriver
         #endregion Properties
 
         #region Methods
+
+        public float this[int _dim]
+        {
+
+            get
+            {
+                if (_dim < 0 || _dim >= DimCount)
+                {
+                    Log.Err("VecN[_dim] - _dim out of bounds, received " + _dim);
+                    return float.NaN;
+                }
+                    
+                return Vals[_dim];
+            }
+            set
+            {
+                if (_dim < 0 || _dim >= DimCount)
+                {
+                    Log.Err("VecN[_dim] - _dim out of bounds, ignoring.  Received " + _dim);
+                    return;
+                }
+                Vals[_dim] = value;
+            }
+        }
 
         /// Vector inequality
         public static bool operator !=(VecN _a, VecN _b)

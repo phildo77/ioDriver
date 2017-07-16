@@ -101,15 +101,18 @@
   <Target Name="AfterBuild">
   </Target>
   -->
-  <Target Name="AfterBuild">
+  <Target Name="AfterBuild" Condition="$(Configuration)==ReleaseUnity">
+    <Message Text="Calling generate Mono symbols.." Importance="high" />
     <CallTarget Targets="GenerateMonoSymbols" Condition=" Exists('$(OutputPath)\$(AssemblyName).pdb') " />
   </Target>
-  <Target Name="GenerateMonoSymbols">
-    <Message Text="$(ProjectName) -&gt; $(TargetPath).mdb" Importance="High" />
+  <Target Name="GenerateMonoSymbols" Condition="$(Configuration)==ReleaseUnity">
+    <Message Text="Generating Mono Symbols.." Importance="high" />
+    <Message Text="$(ProjectName) -&gt; $(TargetPath).mdb" Importance="high" />
     <Exec Command="$(MonoMdbGenerator) $(AssemblyName).dll" WorkingDirectory="$(OutputPath)" />
     <CallTarget Targets="CopyDLL" />
   </Target>
-  <Target Name="CopyDLL">
+  <Target Name="CopyDLL" Condition="$(Configuration)==ReleaseUnity">
+    <Message Text="Copying ioDriver to ioDriverToolsForUnity Project.." Importance="high" />
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFolder="$(ioDriverTFUCorePath)\" />
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll.mdb" DestinationFolder="$(ioDriverTFUCorePath)\" />
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).xml" DestinationFolder="$(ioDriverTFUCorePath)\" />
