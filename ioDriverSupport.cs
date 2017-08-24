@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Policy;
 
 public static partial class ioDriver
 {
@@ -16,18 +17,19 @@ public static partial class ioDriver
         private static Dictionary<string, Tuple<string, Stopwatch>> m_ProfilerData =
             new Dictionary<string, Tuple<string, Stopwatch>>();
         /// <summary>
-        /// Begin profile timer with specified label.
+        /// Begin profile timer with specified label, or resume if it already exists.
         /// </summary>
         /// <param name="_label">Profiler Identifier</param>
         public static void Begin(string _label)
         {
-            Stopwatch watch = new Stopwatch();
-            watch.Start();
             if (m_ProfilerData.ContainsKey(_label))
             {
-                Log.Err("Profiler already contains key: " + _label);
+                m_ProfilerData[_label].Second.Start();
                 return;
             }
+            Stopwatch watch = new Stopwatch();
+            watch.Start();
+            
             m_ProfilerData.Add(_label, new Tuple<string, Stopwatch>(_label, watch));
         }
 
@@ -55,6 +57,18 @@ public static partial class ioDriver
             var ms = (decimal)ticks / freq * 1000;
 
             Log.Info(data.First + " : " + ms.ToString("0.######") + " ms --- Ticks: " + ticks + "  ---- isHR : " + isHR);
+        }
+
+        public static void Cumulative(string _label)
+        {
+            if (!m_ProfilerData.ContainsKey(_label))
+            {
+                Log.Err("Profiler does not contain key: " + _label);
+                return;
+            }
+
+            m_ProfilerData[_label].Second.Stop();
+
         }
     }
 

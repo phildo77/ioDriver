@@ -93,6 +93,9 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="ChangeLog.txt" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
@@ -101,6 +104,7 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <!-- DLL
   <Target Name="AfterBuild" Condition="$(Configuration)==ReleaseUnity">
     <Message Text="Calling generate Mono symbols.." Importance="high" />
     <CallTarget Targets="GenerateMonoSymbols" Condition=" Exists('$(OutputPath)\$(AssemblyName).pdb') " />
@@ -116,5 +120,11 @@
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll" DestinationFolder="$(ioDriverTFUCorePath)\" />
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).dll.mdb" DestinationFolder="$(ioDriverTFUCorePath)\" />
     <Copy SourceFiles="$(OutputPath)\$(AssemblyName).xml" DestinationFolder="$(ioDriverTFUCorePath)\" />
+  </Target>
+  -->
+  <Target Name="AfterBuild" Condition="$(Configuration)==ReleaseUnity">
+    <Message Text="Copying ioDriver to ioDriverToolsForUnity Project.." Importance="high" />
+    <Copy SourceFiles="@(x)" DestinationFolder="$(ioDriverTFUCorePath)\" />
+    <!-- <Copy SourceFiles="$(ProjectDir)*.cs" DestinationFolder="$(ioDriverTFUCorePath)\" /> -->
   </Target>
 </Project>

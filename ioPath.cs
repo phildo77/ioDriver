@@ -3,8 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using System.Text;
+using ioVecN;
 
 
 public static partial class ioDriver
@@ -757,7 +757,7 @@ public static partial class ioDriver
             /// Get an array of this path's frame waypoints.
             public T[] GetFrameWaypoints()
             {
-                return VecN.ToArray<T>(m_FrameVN);
+                return m_FrameVN.ToArray<T>();
             }
 
             /// <summary>
@@ -1373,7 +1373,7 @@ public static partial class ioDriver
                     else
                         PathPointsVN = pathN.ToArray();
 
-                    //Update Segment pct
+                    //Pump Segment pct
                     var progressLen = 0f;
                     m_PathSegments = new Segment[PathPointsVN.Length - 1];
                     for (int idx = 0; idx < m_PathSegments.Length; ++idx)
@@ -1441,7 +1441,7 @@ public static partial class ioDriver
 
                     PathPointsVN = ptsN.ToArray();
                 }
-                PathPoints = VecN.ToArray<T>(PathPointsVN);
+                PathPoints = PathPointsVN.ToArray<T>();
             }
 
 
@@ -2229,7 +2229,7 @@ public static partial class ioDriver
                 if (Closed)
                     points.Add(m_FrameVN[0]);
                 PathPointsVN = points.ToArray();
-                PathPoints = VecN.ToArray<T>(points);
+                PathPoints = points.ToArray<T>();
                 m_PathSegments = m_FrameSegments;
                 return;
             }
@@ -2238,8 +2238,25 @@ public static partial class ioDriver
 
         #endregion Other
 
+        
     }
 
+    /// Convert to type T (T must have constructor defined for this VecN's dim count) 
+    /// <seealso cref="Teacher.TeachCoord{T}(int, Teacher.FuncConstruct{T}, Teacher.FuncGetDim{T}[])"/>
+    /// <seealso cref="Teacher.TeachCoord{T}(Dictionary{int,Teacher.FuncConstruct{T}}, Teacher.FuncGetDim{T}[])"/>
+    internal static T To<T>(this VecN _val)
+    {
+        return DTypeInfo<T>.Constructs[_val.DimCount](_val.Vals);
+    }
+    /// Convert to array of type T.
+    /// <seealso cref="Teacher.TeachCoord{T}(int, Teacher.FuncConstruct{T}, Teacher.FuncGetDim{T}[])"/>
+    /// <seealso cref="Teacher.TeachCoord{T}(Dictionary{int,Teacher.FuncConstruct{T}}, Teacher.FuncGetDim{T}[])"/>
+    internal static T[] ToArray<T>(this IEnumerable<VecN> _points)
+    {
+        return _points.Select(_pt => _pt.To<T>()).ToArray();
+    }
+    /*
+    
     /// <summary>
     /// Vector class with variable dimension count.  Used internally to assist with splining and paths.
     /// </summary>
@@ -2627,6 +2644,400 @@ public static partial class ioDriver
 
         #endregion Methods
     }
-
+    */
     #endregion Nested Types
+}
+
+
+namespace ioVecN
+{
+    /// <summary>
+    /// Vector class with variable dimension count.  Used internally to assist with splining and paths.
+    /// </summary>
+    public class VecN
+    {
+        #region Fields
+
+        /// Dimension data
+        public float[] Vals;
+
+        #endregion Fields
+
+        #region Constructors
+
+        /// <summary>
+        /// VecN constructor
+        /// </summary>
+        /// <param name="_vals">Dimension data</param>
+        public VecN(params float[] _vals)
+        {
+            Vals = _vals;
+        }
+
+        /// <summary>
+        /// Copy constructor
+        /// </summary>
+        /// <param name="_source">VecN data to copy for new VecN</param>
+        public VecN(VecN _source)
+        {
+            Vals = new float[_source.Vals.Length];
+            _source.Vals.CopyTo(Vals, 0);
+        }
+
+
+        #endregion Constructors
+
+        #region Properties
+
+        /// Returns the number of dimensions
+        public int DimCount
+        {
+            get { return Vals.Length; }
+        }
+
+        /// Returns the magnitude of this vector.
+        public float Magnitude
+        {
+            get
+            {
+                return (float)Math.Sqrt(MagnitudeSquared);
+            }
+        }
+
+        /// Returns the magnitude of this vector squared.
+        public float MagnitudeSquared
+        {
+            get
+            {
+                float sqrDist = 0;
+                for (int idx = 0; idx < DimCount; ++idx)
+                    sqrDist += Vals[idx] * Vals[idx];
+
+                return (float)sqrDist;
+            }
+        }
+
+        /// Get a vector that represents this vector normalized.
+        public VecN Normalized
+        {
+            get
+            {
+
+                var mag = Magnitude;
+                var norm = new float[DimCount];
+                for (int idx = 0; idx < DimCount; ++idx)
+                {
+                    norm[idx] = Vals[idx] / mag;
+                }
+                return new VecN(norm);
+            }
+        }
+
+        #endregion Properties
+
+        #region Methods
+
+        public float this[int _dim]
+        {
+
+            get
+            {
+                if (_dim < 0 || _dim >= DimCount)
+                {
+                    return float.NaN;
+                }
+
+                return Vals[_dim];
+            }
+            set
+            {
+                if (_dim < 0 || _dim >= DimCount)
+                {
+                    return;
+                }
+                Vals[_dim] = value;
+            }
+        }
+
+        /// Vector inequality
+        public static bool operator !=(VecN _a, VecN _b)
+        {
+            return !(_a == _b);
+        }
+
+        /// Scalar multiplication
+        public static VecN operator *(VecN _a, float _scalar)
+        {
+            var scaled = new float[_a.DimCount];
+            for (int idx = 0; idx < _a.DimCount; ++idx)
+                scaled[idx] = _a.Vals[idx] * _scalar;
+            return new VecN(scaled);
+        }
+
+        /// Vector addition
+        public static VecN operator +(VecN _a, VecN _b)
+        {
+            if (_a.DimCount != _b.DimCount)
+                throw new Exception("Dimension count must match.");
+            var added = new float[_a.DimCount];
+            for (int idx = 0; idx < _a.DimCount; ++idx)
+                added[idx] = _a.Vals[idx] + _b.Vals[idx];
+            return new VecN(added);
+        }
+
+        /// Vector subtraction
+        public static VecN operator -(VecN _a, VecN _b)
+        {
+            if (_a.DimCount != _b.DimCount)
+                throw new Exception("Dimension count must match.");
+            var subt = new float[_a.DimCount];
+            for (int idx = 0; idx < _a.DimCount; ++idx)
+                subt[idx] = _a.Vals[idx] - _b.Vals[idx];
+            return new VecN(subt);
+        }
+
+        /// Vector negative
+        public static VecN operator -(VecN _vec)
+        {
+            var neg = new float[_vec.DimCount];
+            for (int idx = 0; idx < _vec.DimCount; ++idx)
+                neg[idx] = -_vec.Vals[idx];
+            return new VecN(neg);
+        }
+
+        /// Vector equality
+        public static bool operator ==(VecN _a, VecN _b)
+        {
+            if (System.Object.ReferenceEquals(_a, _b))
+                return true;
+
+            if (((object)_a == null) || ((object)_b == null))
+                return false;
+
+            if (_a.DimCount != _b.DimCount)
+                return false;
+
+            for (int idx = 0; idx < _a.DimCount; ++idx)
+                if (_a.Vals[idx] != _b.Vals[idx]) return false;
+            return true;
+        }
+
+
+        /// Vector Dot Product
+        public static float Dot(VecN _a, VecN _b)
+        {
+            if (_a.DimCount != _b.DimCount)
+                throw new Exception("Dimension count must match.");
+            var dimCount = _a.DimCount;
+            float tVal = 0;
+            for (int idx = 0; idx < dimCount; ++idx)
+                tVal += _a.Vals[idx] * _b.Vals[idx];
+            return tVal;
+        }
+
+        /// <summary>
+        /// Get angle in radians between specified VecNs.
+        /// </summary>
+        /// <param name="_a">First Vector</param>
+        /// <param name="_b">Second Vector</param>
+        /// <returns>Angle in radians</returns>
+        public static float Angle(VecN _a, VecN _b)
+        {
+            var dot = Dot(_a, _b);
+            var magA = _a.Magnitude;
+            var magB = _b.Magnitude;
+            var dotMag = dot / (magA * magB);
+            if ((double)dotMag >= 1d) return 0f;
+            if ((double)dotMag <= -1d) return (float)Math.PI;
+            var rsltD = Math.Acos(dotMag);
+
+            return (float)Math.Acos(dotMag);
+        }
+
+        /// Vector equality with precision
+        public static bool EqualsApprox(VecN _a, VecN _b, float _precision = 0.0001f)
+        {
+            if (System.Object.ReferenceEquals(_a, _b))
+                return true;
+
+            if (((object)_a == null) || ((object)_b == null))
+                return false;
+
+            if (_a.DimCount != _b.DimCount)
+                return false;
+
+            for (int idx = 0; idx < _a.DimCount; ++idx)
+                if (!EqualsApprox(_a.Vals[idx], _b.Vals[idx])) return false;
+            return true;
+        }
+
+        /// Object equality
+        public override bool Equals(System.Object obj)
+        {
+            if (obj == null) return false;
+
+            VecN p = obj as VecN;
+            if ((System.Object)p == null) return false;
+
+            for (int idx = 0; idx < DimCount; ++idx)
+                if (Vals[idx] != p.Vals[idx]) return false;
+            return true;
+        }
+
+        /// Vector equality
+        public bool Equals(VecN _p)
+        {
+            if ((object)_p == null) return false;
+
+            for (int idx = 0; idx < DimCount; ++idx)
+                if (Vals[idx] != _p.Vals[idx]) return false;
+            return true;
+        }
+
+        /// Hash code calculation
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hash = 17;
+                foreach (var val in Vals)
+                    hash = hash * 23 + val.GetHashCode();
+                return hash;
+            }
+
+        }
+
+
+
+        /// String representation of this vector
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.Append("( ");
+            for (int idx = 0; idx < DimCount; ++idx)
+                sb.Append(Vals[idx] + ", ");
+            sb.Append(" )");
+            return sb.ToString();
+        }
+
+        /// <summary>
+        /// Linearly interpolate line defined by two points.
+        /// </summary>
+        /// <param name="_ptA">Line definition point A</param>
+        /// <param name="_ptB">Line definition point B</param>
+        /// <param name="_pct">Percent along line to calculate (0 to 1f)</param>
+        /// <returns>Calculated LERP point</returns>
+        public static VecN Lerp(VecN _ptA, VecN _ptB, float _pct)
+        {
+            var rslt = new float[_ptA.DimCount];
+            for (int dim = 0; dim < _ptA.DimCount; ++dim)
+                rslt[dim] = Lerp(_ptA.Vals[dim], _ptB.Vals[dim], _pct);
+            return new VecN(rslt);
+        }
+
+        /// <summary>
+        /// Inverse lerp calculation.  Does not verify if specified value is part of line.
+        /// Checks each dimension for ILerp value linearly until valid (_a dim != _b dim) is found.
+        /// </summary>
+        /// <param name="_ptA">Line start point</param>
+        /// <param name="_ptB">Line end point</param>
+        /// <param name="_value">Value to ILerp on line</param>
+        /// <returns>Percent of value along line, NaN on fail</returns>
+        public static float ILerp(VecN _ptA, VecN _ptB, VecN _value)
+        {
+            var dimCount = _ptA.DimCount;
+            float result = float.NaN;
+
+            if (_ptA == _value) return 0f;
+            if (_ptB == _value) return 1f;
+
+            for (int dim = 0; dim < dimCount; ++dim)
+            {
+                float from = _ptA.Vals[dim];
+                float to = _ptB.Vals[dim];
+                float val = _value.Vals[dim];
+                if (from == to)
+                    continue;
+                result = (from - val) / (from - to);
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Find distance of point from closest point on specified line.
+        /// </summary>
+        /// <param name="_linePtA">Line point A</param>
+        /// <param name="_linePtB">Line point B</param>
+        /// <param name="_point">Point to measure distance from</param>
+        /// <param name="_pointOnLine">Closest point on line</param>
+        /// <returns>Distance between point and closest point on line</returns>
+        public static float PointToLineDistance(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
+        {
+            return (float)Math.Sqrt(PointToLineDistanceSquared(_linePtA, _linePtB, _point, out _pointOnLine));
+        }
+
+        /// See <see cref="PointToLineDistance"/> (which is the square root of the result of this function)
+        public static float PointToLineDistanceSquared(VecN _linePtA, VecN _linePtB, VecN _point, out VecN _pointOnLine)
+        {
+            var line = _linePtB - _linePtA;
+            var lineMag = line.Magnitude;
+            var lambda = VecN.Dot((_point - _linePtA), line) / lineMag;
+            lambda = Math.Min(Math.Max(0f, lambda), lineMag);
+            var p = line * lambda * (1 / lineMag);
+            _pointOnLine = _linePtA + p;
+            return (_linePtA + p - _point).MagnitudeSquared;
+        }
+
+        /// <summary>
+        /// Return the nearest point found on line (defined by two points) to specified point.
+        /// </summary>
+        /// <param name="_linePtA">Line definition point A</param>
+        /// <param name="_linePtB">Line definition point B</param>
+        /// <param name="_point">Point to find nearest to on line</param>
+        /// <returns>Closest point on line to _point</returns>
+        public static VecN NearestPointOnLine(VecN _linePtA, VecN _linePtB, VecN _point)
+        {
+            var lineDir = (_linePtB - _linePtA).Normalized;
+            var v = _point - _linePtA;
+            var d = VecN.Dot(v, lineDir);
+            return _linePtA + lineDir * d;
+        }
+
+
+
+        /// <summary>
+        /// Floating point equality check with precision.
+        /// </summary>
+        /// <param name="_a"></param>
+        /// <param name="_b"></param>
+        /// <param name="_epsilon"></param>
+        /// <returns></returns>
+        private static bool EqualsApprox(float _a, float _b, float _epsilon = 0.0001f)
+        {
+            float absA = Math.Abs(_a);
+            float absB = Math.Abs(_b);
+            float diff = Math.Abs(_a - _b);
+
+            if (_a == _b)
+                return true;
+            else if (_a == 0 || _b == 0 || diff < float.Epsilon)
+                return diff < _epsilon;
+            else
+                return diff / (absA + absB) < _epsilon;
+        }
+
+        /// <summary>
+        /// Linearly interpolate line defined by specified points at specified percent.  Does not clamp.
+        /// </summary>
+        /// <param name="_a">Line definition point A</param>
+        /// <param name="_b">Line definition point B</param>
+        /// <param name="_pct">Percent target for interpolation</param>
+        /// <returns>Lerp result</returns>
+        private static float Lerp(float _a, float _b, float _pct)
+        {
+            return _a + (_b - _a) * _pct;
+        }
+        #endregion Methods
+    }
 }

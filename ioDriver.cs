@@ -169,7 +169,9 @@ public static partial class ioDriver
         /// See <see cref="DBase.OnUnpause"/>
         OnUnpause,
         /// See <see cref="DBase.OnPauseToggle"/>
-        OnPauseToggle
+        OnPauseToggle,
+        OnBeforeUpdate,
+        OnAfterUpdate
     }
 
     /// <summary>
@@ -374,7 +376,7 @@ public static partial class ioDriver
     #region Properties
 
     /// <summary>
-    /// When set to true ALL drivers are debug tracked and will run in Debug mode.  <see cref="DBase.UpdateDebug()"/>
+    /// When set to true ALL drivers are debug tracked and will run in Debug mode.  <see cref="DBase.PumpDebug"/>
     /// </summary>
     public static bool DebugEnableGlobal
     {
@@ -423,7 +425,7 @@ public static partial class ioDriver
             var val = value;
             if (val <= 0)
             {
-                Log.Err("Maximum Update Frequency cannot be equal to or less than 0.  Setting default of '" +
+                Log.Err("Maximum Pump Frequency cannot be equal to or less than 0.  Setting default of '" +
                         Defaults.MaxUpdateFrequency + "'");
                 m_MaxUpdateFrequency = Defaults.MaxUpdateFrequency;
                 return;
@@ -517,7 +519,8 @@ public static partial class ioDriver
     }
 
     /// <summary>
-    /// Get driver with specified ID or name.  Names are searched first.
+    /// Get driver with specified ID or name.  Names are searched first.  Retrieves only drivers that are running.  
+    /// Will return null if an existing driver ID is requested that has not been started.
     /// </summary>
     /// <param name="_nameOrID">The Name or ID of the driver to retrieve.</param>
     /// <returns>The running driver if found, null otherwise.</returns>
@@ -564,10 +567,10 @@ public static partial class ioDriver
         //Initialize Events
         Event.Init();
 
-        #if ioUNITY
+#if ioUNITY
         //Initialize Unity Manager
         ioDriverUnityManager.Init();
-        #endif
+#endif
         Log.Info("ioDriver Initialized");
     }
 
@@ -709,6 +712,13 @@ public static partial class ioDriver
             _setter = _val => array.SetValue(_val, idx);
             _targetInfo = new TargetInfo(targetObj.ToString() + ":" + idx, targetObj);
             return true;
+        }
+
+        //Unsupported expression TODO Add support
+        if (!(_expr.Body is MemberExpression))
+        {
+            Log.Err("Currently, only Action, array, field and property are supported.");
+            return false;
         }
 
         //Property or Field?
@@ -853,7 +863,7 @@ public static partial class ioDriver
 
         /// Backing field for <see cref="TargetInfo"/>
         private TargetInfo m_TargetInfo;
-        private float m_TimescaleLocal;
+        protected float m_TimescaleLocal;
 
         #endregion Fields
 
@@ -892,22 +902,34 @@ public static partial class ioDriver
 
         #region Events
 
+        /// <summary>
         /// Immediate mode event fired when <see cref="Cancel()"/> is called.
+        /// </summary>
         public event Action OnCancel;
 
+        /// <summary>
         /// Immediate mode event fired when <see cref="Stop()"/> is called.
+        /// </summary>
         public event Action OnFinish;
 
+        /// <summary>
         /// Immediate mode event fired when <see cref="Paused"/> is changed to true.
+        /// </summary>
         public event Action OnPause;
 
+        /// <summary>
         /// Immediate mode event fired when <see cref="Paused"/> is changed.
+        /// </summary>
         public event Action OnPauseToggle;
 
+        /// <summary>
         /// Immediate mode event fired when driver is started.  <seealso cref="DBase.Start"/><seealso cref="ioDriverFluency.Go{T}(T)"/>
+        /// </summary>
         public event Action OnStart;
 
+        /// <summary>
         /// Immediate mode event fired when <see cref="Paused"/> is changed to false.
+        /// </summary>
         public event Action OnUnpause;
 
         #endregion Events
@@ -955,7 +977,8 @@ public static partial class ioDriver
         }
 
         /// <summary>
-        /// This driver's total duration in seconds.
+        /// This driver's total duration in seconds.  <see cref="Stop()"/> is called when <see cref="ElapsedTime"/> >= Duration.
+        /// NOTE: Duration is purely a user defined time stop and is not calculated (eg for <see cref="ILoopable"/>).
         /// </summary>
         public float Duration
         {
@@ -1114,7 +1137,7 @@ public static partial class ioDriver
                     Log.Warn("ioDriver.DBase.TargetInfo - Can't change target information after the driver has already been started!");
                     return;
                 }
-                m_TargetInfo = value;
+                m_TargetInfo = value ?? new TargetInfo();
             }
         }
 
@@ -1134,13 +1157,13 @@ public static partial class ioDriver
             get { return m_TimescaleLocal; }
             set
             {
-                if (m_TimescaleLocal == value) return;
-                if (value < 0)
+                var newTs = value;
+                if (newTs < 0)
                 {
                     Log.Err("Driver local timescale cannot be less than zero.  Setting to default of '" + Defaults.Timescale + "'");
-                    m_TimescaleLocal = Defaults.Timescale;
+                    newTs = Defaults.Timescale;
                 }
-                m_TimescaleLocal = value;
+                m_TimescaleLocal = newTs;
             }
         }
 
@@ -1151,6 +1174,35 @@ public static partial class ioDriver
         {
             get;
             set;
+        }
+
+        private Action m_BeforePump = delegate { };
+        private Action m_AfterPump = delegate { };
+
+        /// <summary>
+        /// Action fired before driver is pumped.
+        /// </summary>
+        public Action BeforePump 
+        {
+            set
+            {
+                if (value == null)
+                    m_BeforePump = delegate { };
+                m_BeforePump = value;
+            } 
+        }
+
+        /// <summary>
+        /// Action fired after driver is pumped
+        /// </summary>
+        public Action AfterPump
+        {
+            set
+            {
+                if (value == null)
+                    m_AfterPump = delegate { };
+                m_AfterPump = value;
+            }
         }
 
         #endregion Properties
@@ -1315,17 +1367,17 @@ public static partial class ioDriver
         /// <summary>
         /// Override for driver core functionality
         /// </summary>
-        protected virtual void Update()
+        protected virtual void Pump()
         {
         }
 
         /// <summary>
         /// Optional debug mode override.  Will be called if <see cref="DebugEnable"/> or <see cref="ioDriver.DebugEnableGlobal"/> is true.
-        /// If not overridden, <see cref="Update()"/> is called.
+        /// If not overridden, <see cref="Pump"/> is called.
         /// </summary>
-        protected virtual void UpdateDebug()
+        protected virtual void PumpDebug()
         {
-            Update();
+            Pump();
         }
 
         private string AutoName()
@@ -1363,10 +1415,12 @@ public static partial class ioDriver
                 return;
             }
 
+            m_BeforePump();
             if (DebugEnable || m_DebugEnableGlobal)
-                UpdateDebug();
+                PumpDebug();
             else
-                Update();
+                Pump();
+            m_AfterPump();
         }
 
         #endregion Methods
@@ -1379,6 +1433,9 @@ public static partial class ioDriver
             private static readonly long m_TicksAtStart = System.DateTime.Now.Ticks;
             private static float m_LastUpdateTimestamp;
             private static Queue<DBase> m_StartQueue;
+
+            public static event Action OnBeforeUpdate;
+            public static event Action OnAfterUpdate;
 
             static Manager()
             {
@@ -1790,7 +1847,7 @@ public static partial class ioDriver
         #region Properties
 
         /// Gets current value from the <see cref="Driver"/> function,
-        /// pulled during last update <see cref="Pump"/>.  Will reflect any changes
+        /// pulled during last update <see cref="ioDriver.Pump"/>.  Will reflect any changes
         /// made in the <see cref="DriveInjector"/>.
         public TDri CurrentDriveVal
         {
@@ -1798,7 +1855,7 @@ public static partial class ioDriver
         }
 
         /// Gets current value from <see cref="DriveToTarget"/> pulled
-        /// during last update <see cref="Pump"/>.  Will reflect any changes
+        /// during last update <see cref="ioDriver.Pump"/>.  Will reflect any changes
         /// made in the <see cref="TargetInjector"/>.
         public TTar CurrentTargetVal
         {
@@ -1808,7 +1865,7 @@ public static partial class ioDriver
         /// Sets the drive injector for this driver.
         /// Allows custom code to be run between <see cref="Driver"/> and
         /// <see cref="DriveToTarget"/>.  Defaults to <see cref="InjectorPassthrough{T}"/>
-        /// <seealso cref="Update"/>
+        /// <seealso cref="Pump"/>
         public Injector<TDri> DriveInjector
         {
             private get { return m_DriveInjector; }
@@ -1824,14 +1881,14 @@ public static partial class ioDriver
             }
         }
 
-        /// Function that returns driver value to be interpreted on each <see cref="Update"/> cycle.
+        /// Function that returns driver value to be interpreted on each <see cref="Pump"/> cycle.
         public Func<TDri> Driver
         {
             get;
             protected set;
         }
 
-        /// Action to be run on each <see cref="Update"/> cycle.
+        /// Action to be run on each <see cref="Pump"/> cycle.
         public Action<TTar> TarAction
         {
             get;
@@ -1848,7 +1905,7 @@ public static partial class ioDriver
 
         /// Sets the target injector for this driver.
         /// Allows custom code to be run between <see cref="DriveToTarget"/> and
-        /// <see cref="TarAction"/>.  Defaults to <see cref="InjectorPassthrough{T}"/><seealso cref="Update"/>
+        /// <see cref="TarAction"/>.  Defaults to <see cref="InjectorPassthrough{T}"/><seealso cref="Pump"/>
         public Injector<TTar> TargetInjector
         {
             private get { return m_TargetInjector; }
@@ -1907,8 +1964,8 @@ public static partial class ioDriver
         /// <returns>Value to be passed to the target action.</returns>
         protected abstract TTar DriveToTarget(TDri _drive);
 
-        /// <summary>Core driver functionality.  Update is called for every running driver when the global <see cref="ioDriver.Pump"/> is called.</summary>
-        protected override void Update()
+        /// <summary>Core driver functionality.  Pump is called for every running driver when the global <see cref="ioDriver.Pump"/> is called.</summary>
+        protected override void Pump()
         {
             CurrentDriveVal = DriveInjector(Driver());
             CurrentTargetVal = TargetInjector(DriveToTarget(CurrentDriveVal));

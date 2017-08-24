@@ -1,0 +1,143 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>ioVecN</name>
+    </assembly>
+    <members>
+        <member name="T:ioVecN.VecN">
+            <summary>
+            Vector class with variable dimension count.  Used internally to assist with splining and paths.
+            </summary>
+        </member>
+        <member name="F:ioVecN.VecN.Vals">
+            Dimension data
+        </member>
+        <member name="M:ioVecN.VecN.#ctor(System.Single[])">
+            <summary>
+            VecN constructor
+            </summary>
+            <param name="_vals">Dimension data</param>
+        </member>
+        <member name="M:ioVecN.VecN.#ctor(ioVecN.VecN)">
+            <summary>
+            Copy constructor
+            </summary>
+            <param name="_source">VecN data to copy for new VecN</param>
+        </member>
+        <member name="M:ioVecN.VecN.op_Inequality(ioVecN.VecN,ioVecN.VecN)">
+            Vector inequality
+        </member>
+        <member name="M:ioVecN.VecN.op_Multiply(ioVecN.VecN,System.Single)">
+            Scalar multiplication
+        </member>
+        <member name="M:ioVecN.VecN.op_Addition(ioVecN.VecN,ioVecN.VecN)">
+            Vector addition
+        </member>
+        <member name="M:ioVecN.VecN.op_Subtraction(ioVecN.VecN,ioVecN.VecN)">
+            Vector subtraction
+        </member>
+        <member name="M:ioVecN.VecN.op_UnaryNegation(ioVecN.VecN)">
+            Vector negative
+        </member>
+        <member name="M:ioVecN.VecN.op_Equality(ioVecN.VecN,ioVecN.VecN)">
+            Vector equality
+        </member>
+        <member name="M:ioVecN.VecN.Dot(ioVecN.VecN,ioVecN.VecN)">
+            Vector Dot Product
+        </member>
+        <member name="M:ioVecN.VecN.Angle(ioVecN.VecN,ioVecN.VecN)">
+            <summary>
+            Get angle in radians between specified VecNs.
+            </summary>
+            <param name="_a">First Vector</param>
+            <param name="_b">Second Vector</param>
+            <returns>Angle in radians</returns>
+        </member>
+        <member name="M:ioVecN.VecN.EqualsApprox(ioVecN.VecN,ioVecN.VecN,System.Single)">
+            Vector equality with precision
+        </member>
+        <member name="M:ioVecN.VecN.Equals(System.Object)">
+            Object equality
+        </member>
+        <member name="M:ioVecN.VecN.Equals(ioVecN.VecN)">
+            Vector equality
+        </member>
+        <member name="M:ioVecN.VecN.GetHashCode">
+            Hash code calculation
+        </member>
+        <member name="M:ioVecN.VecN.ToString">
+            String representation of this vector
+        </member>
+        <member name="M:ioVecN.VecN.Lerp(ioVecN.VecN,ioVecN.VecN,System.Single)">
+            <summary>
+            Linearly interpolate line defined by two points.
+            </summary>
+            <param name="_ptA">Line definition point A</param>
+            <param name="_ptB">Line definition point B</param>
+            <param name="_pct">Percent along line to calculate (0 to 1f)</param>
+            <returns>Calculated LERP point</returns>
+        </member>
+        <member name="M:ioVecN.VecN.ILerp(ioVecN.VecN,ioVecN.VecN,ioVecN.VecN)">
+            <summary>
+            Inverse lerp calculation.  Does not verify if specified value is part of line.
+            Checks each dimension for ILerp value linearly until valid (_a dim != _b dim) is found.
+            </summary>
+            <param name="_ptA">Line start point</param>
+            <param name="_ptB">Line end point</param>
+            <param name="_value">Value to ILerp on line</param>
+            <returns>Percent of value along line, NaN on fail</returns>
+        </member>
+        <member name="M:ioVecN.VecN.PointToLineDistance(ioVecN.VecN,ioVecN.VecN,ioVecN.VecN,ioVecN.VecN@)">
+            <summary>
+            Find distance of point from closest point on specified line.
+            </summary>
+            <param name="_linePtA">Line point A</param>
+            <param name="_linePtB">Line point B</param>
+            <param name="_point">Point to measure distance from</param>
+            <param name="_pointOnLine">Closest point on line</param>
+            <returns>Distance between point and closest point on line</returns>
+        </member>
+        <member name="M:ioVecN.VecN.PointToLineDistanceSquared(ioVecN.VecN,ioVecN.VecN,ioVecN.VecN,ioVecN.VecN@)">
+            See <see cref="M:ioVecN.VecN.PointToLineDistance(ioVecN.VecN,ioVecN.VecN,ioVecN.VecN,ioVecN.VecN@)"/> (which is the square root of the result of this function)
+        </member>
+        <member name="M:ioVecN.VecN.NearestPointOnLine(ioVecN.VecN,ioVecN.VecN,ioVecN.VecN)">
+            <summary>
+            Return the nearest point found on line (defined by two points) to specified point.
+            </summary>
+            <param name="_linePtA">Line definition point A</param>
+            <param name="_linePtB">Line definition point B</param>
+            <param name="_point">Point to find nearest to on line</param>
+            <returns>Closest point on line to _point</returns>
+        </member>
+        <member name="M:ioVecN.VecN.EqualsApprox(System.Single,System.Single,System.Single)">
+            <summary>
+            Floating point equality check with precision.
+            </summary>
+            <param name="_a"></param>
+            <param name="_b"></param>
+            <param name="_epsilon"></param>
+            <returns></returns>
+        </member>
+        <member name="M:ioVecN.VecN.Lerp(System.Single,System.Single,System.Single)">
+            <summary>
+            Linearly interpolate line defined by specified points at specified percent.  Does not clamp.
+            </summary>
+            <param name="_a">Line definition point A</param>
+            <param name="_b">Line definition point B</param>
+            <param name="_pct">Percent target for interpolation</param>
+            <returns>Lerp result</returns>
+        </member>
+        <member name="P:ioVecN.VecN.DimCount">
+            Returns the number of dimensions
+        </member>
+        <member name="P:ioVecN.VecN.Magnitude">
+            Returns the magnitude of this vector.
+        </member>
+        <member name="P:ioVecN.VecN.MagnitudeSquared">
+            Returns the magnitude of this vector squared.
+        </member>
+        <member name="P:ioVecN.VecN.Normalized">
+            Get a vector that represents this vector normalized.
+        </member>
+    </members>
+</doc>

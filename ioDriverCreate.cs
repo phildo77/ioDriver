@@ -614,7 +614,10 @@ public static class ioDriverFluency //TODO cleanup/split
     /// <returns></returns>
     public static T SetTargetObject<T>(this T _thisDriver, object _targetObject) where T : ioDriver.DBase
     {
-        _thisDriver.TargetInfo = new ioDriver.TargetInfo(_targetObject.ToString(), _targetObject);
+        if (_targetObject == null)
+            _thisDriver.TargetInfo = null;
+        else
+            _thisDriver.TargetInfo = new ioDriver.TargetInfo(_targetObject.ToString(), _targetObject);
         return _thisDriver;
     }
 
@@ -770,7 +773,7 @@ public static class ioDriverFluency //TODO cleanup/split
     /// </summary>
     /// <typeparam name="T"></typeparam>
     /// <param name="_thisDriver"></param>
-    /// <returns></returns>
+    /// <returns>This driver</returns>
     public static T SetLoopOnce<T>(this T _thisDriver) where T : ioDriver.ILoopable
     {
         _thisDriver.LoopOnce();
@@ -785,11 +788,30 @@ public static class ioDriverFluency //TODO cleanup/split
     /// <typeparam name="T"></typeparam>
     /// <param name="_path"></param>
     /// <param name="_closed"></param>
-    /// <returns></returns>
+    /// <returns>This path</returns>
     public static T SetClosed<T>(this T _path, bool _closed) where T : ioDriver.IPath
     {
         _path.Closed = _closed;
         return _path;
+    }
+
+    /// <summary>
+    /// Fluency Method.  <see cref="ioDriver.Base{T}.BeforeUpdate"/>
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="_driver"></param>
+    /// <param name="_beforeUpdate"></param>
+    /// <returns>This driver</returns>
+    public static T SetBeforeUpdate<T>(this T _driver, Action<T> _beforeUpdate) where T : ioDriver.DBase
+    {
+        _driver.BeforePump = () => _beforeUpdate(_driver);
+        return _driver;
+    }
+
+    public static T SetAfterUpdate<T>(this T _driver, Action<T> _afterUpdate) where T : ioDriver.DBase
+    {
+        _driver.AfterPump = () => _afterUpdate(_driver);
+        return _driver;
     }
 
     /// <summary>
