@@ -4,4 +4,5 @@
 -Changed DBase m_TimescaleLocal to protected (from private)
 -Fixed bug in DBase.TimescaleLocal where a set value less than zero was not caught
 -Added note on DBase.Duration to help avoid confusion.
--Added bug where unsupported expressions were not handled and threw an exception in ExtractExpression
+-Fixed bug where unsupported expressions were not handled and threw an exception in ExtractExpression
+-Fixed EaseOutExpo and EaseInExpo incorrect formulas

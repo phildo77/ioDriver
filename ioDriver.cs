@@ -2273,7 +2273,8 @@ public static partial class ioDriver
 
         private static float EaseOutExpo(float _pct)
         {
-            return -(float)Math.Pow(2, -10 * _pct) + 1;
+            return 1f - EaseInExpo(1f - _pct);
+            //return -(float)Math.Pow(2, -10 * _pct) + 1;
         }
 
         private static float EaseOutQuad(float _pct)
