@@ -909,6 +909,9 @@ public static class ioDriverFluency //TODO cleanup/split
             case ioDriver.Events.OnStart:
                 _thisDriver.OnStart += () => _action(_thisDriver);
                 break;
+            case ioDriver.Events.OnAfterDelay:
+                _thisDriver.OnAfterDelay += () => _action(_thisDriver);
+                break;
             case ioDriver.Events.OnFinish:
                 _thisDriver.OnFinish += () => _action(_thisDriver);
                 break;

@@ -6,3 +6,4 @@
 -Added note on DBase.Duration to help avoid confusion.
 -Fixed bug where unsupported expressions were not handled and threw an exception in ExtractExpression
 -Fixed EaseOutExpo and EaseInExpo incorrect formulas
+-Added OnAfterDelay immediate mode event to DBase

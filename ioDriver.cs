@@ -160,6 +160,8 @@ public static partial class ioDriver
     {
         /// See <see cref="DBase.OnStart"/>
         OnStart,
+        /// See <see cref="DBase.OnAfterDelay"/>
+        OnAfterDelay,
         /// See <see cref="DBase.OnFinish"/>
         OnFinish,
         /// See <see cref="DBase.OnCancel"/>
@@ -173,6 +175,7 @@ public static partial class ioDriver
         OnBeforeUpdate,
         OnAfterUpdate
     }
+
 
     /// <summary>
     /// Immediate mode events for <see cref="ILoopable"/>
@@ -928,6 +931,12 @@ public static partial class ioDriver
         public event Action OnStart;
 
         /// <summary>
+        /// Immediate mode event fied when driver has finished delay time.  
+        /// Not fired if delay was initially zero. <seealso cref="DBase.Delay"/>
+        /// </summary>
+        public event Action OnAfterDelay;
+
+        /// <summary>
         /// Immediate mode event fired when <see cref="Paused"/> is changed to false.
         /// </summary>
         public event Action OnUnpause;
@@ -1405,6 +1414,10 @@ public static partial class ioDriver
                 Delay -= SecsSinceLastUpdate;
                 if (Delay > 0)
                     return;
+                if (OnAfterDelay != null)
+                    OnAfterDelay();
+                Delay = 0;
+
             }
 
             ElapsedTime += SecsSinceLastUpdate;
@@ -2115,7 +2128,7 @@ public static partial class ioDriver
         //Tested
         private static float EaseInExpo(float _pct)
         {
-            return (float)Math.Pow(2, 10 * (_pct - 1));
+            return _pct == 0 ? 0 : (float)Math.Pow(2, 10 * (_pct - 1));
         }
 
         private static float EaseInOutBack(float _pct)
