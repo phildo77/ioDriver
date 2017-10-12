@@ -602,7 +602,7 @@ public static partial class ioDriver
     {
         Hooks.UpdateManager();
     }
-
+    
     /// <summary>
     /// Disregard any accrued time since the last update.
     /// Tells the next update that no time has passed since the last call to update.
@@ -1525,15 +1525,14 @@ public static partial class ioDriver
             }
 
             /// <summary>
-            /// Begin managing this driver.  Determines whether it needs to be checked for conflicting driver or can be immediately tracked.
+            /// Begin managing this driver.
             /// </summary>
             /// <param name="_driver">Driver to be managed.</param>
             /// <returns>m_Running and tracked driver or null if cancelled due to conflict.</returns>
             private static DBase Manage(DBase _driver)
             {
-                if (_driver.TargetInfo.TargetObject != TargetInfo.TARGET_NONE)
-                    return ConflictCheck(_driver);
-                return Track(_driver);
+
+                return ConflictCheck(_driver);
             }
 
             /// <summary>
@@ -1600,7 +1599,7 @@ public static partial class ioDriver
 
                 //Check target conflict
                 var tObj = _newDriver.TargetInfo.TargetObject;
-                if (!DriverIDsByObject.ContainsKey(tObj))
+                if (!DriverIDsByObject.ContainsKey(tObj) || tObj == TargetInfo.TARGET_NONE)
                     return Track(_newDriver);
                 foreach (var id in DriverIDsByObject[tObj])
                 {
